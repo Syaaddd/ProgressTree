@@ -4,3 +4,6 @@ target/
 dependency-reduced-pom.xml
 *.db
 *.db.migrated
+*.class
+*.jar
+!src/**

@@ -1,0 +1,26 @@
+name: ProgressTree
+version: '2.0.0'
+main: com.github.Syaaddd.progresstree.ProgressTree
+api-version: '1.21'
+author: Syaaddd
+description: Unlock Your Path, Not Just Rewards - A unique progression tree plugin with choice-based rewards
+
+commands:
+  progresstree:
+    description: Main ProgressTree command
+    usage: /<command> [open|claim|check|help|reload|migrate]
+    aliases: [pt, ptree]
+
+permissions:
+  progresstree.open:
+    description: Allow player to open progress tree GUI
+    default: true
+  progresstree.claim:
+    description: Allow player to claim milestones
+    default: true
+  progresstree.check:
+    description: Allow player to check progress
+    default: true
+  progresstree.admin:
+    description: Admin permissions for ProgressTree management
+    default: op

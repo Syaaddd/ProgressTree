@@ -1,0 +1,6 @@
+target/
+*.iml
+.idea/
+dependency-reduced-pom.xml
+*.db
+*.db.migrated

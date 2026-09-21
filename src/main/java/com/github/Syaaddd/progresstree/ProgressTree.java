@@ -16,6 +16,10 @@ import com.github.Syaaddd.progresstree.listener.PlaytimeTracker;
 import com.github.Syaaddd.progresstree.milestone.MilestoneManager;
 import com.github.Syaaddd.progresstree.placeholder.PlaceholderHook;
 import com.github.Syaaddd.progresstree.util.Logger;
+import com.github.Syaaddd.progresstree.util.MessageUtil;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class ProgressTree extends JavaPlugin {
@@ -26,6 +30,11 @@ public final class ProgressTree extends JavaPlugin {
     private MilestoneManager milestoneManager;
     private CategoryRegistry categoryRegistry;
     private Logger logger;
+
+    // Shared GUI instances for click routing
+    private ProgressTreeGUI treeGui;
+    private CategoryHubGUI hubGui;
+    private ChoiceGUI choiceGUI;
 
     @Override
     public void onEnable() {
@@ -59,8 +68,13 @@ public final class ProgressTree extends JavaPlugin {
         categoryRegistry = new CategoryRegistry(this);
         categoryRegistry.load();
 
+        // Shared GUI instances
+        treeGui = new ProgressTreeGUI(this);
+        hubGui = new CategoryHubGUI(this);
+
         // Command registration
         ProgressTreeCommand command = new ProgressTreeCommand(this);
+        choiceGUI = command.getChoiceGUI();
         getCommand("progresstree").setExecutor(command);
         getCommand("progresstree").setTabCompleter(new ProgressTreeTabCompleter(this));
 
@@ -68,33 +82,35 @@ public final class ProgressTree extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new EventListeners(this), this);
         getServer().getPluginManager().registerEvents(new ProgressUpdateListener(this), this);
 
-        // GUI click/drag handlers
-        ProgressTreeGUI gui = new ProgressTreeGUI(this);
-        CategoryHubGUI hubGui = new CategoryHubGUI(this);
-        ChoiceGUI choiceGUI = command.getChoiceGUI();
-
-        String guiTitle = configManager.getGuiTitle();
-        String hubTitle = com.github.Syaaddd.progresstree.util.MessageUtil.color("&8ProgressTree");
-        String choiceTitlePrefix = com.github.Syaaddd.progresstree.util.MessageUtil.color("&8Choose Reward - ");
+        // GUI click/drag handlers — single source of truth for all inventory interactions
+        String hubTitle = MessageUtil.color("&8ProgressTree");
+        String choiceTitlePrefix = MessageUtil.color("&8Choose Reward - ");
 
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
-            public void onInventoryClick(org.bukkit.event.inventory.InventoryClickEvent event) {
+            public void onInventoryClick(InventoryClickEvent event) {
                 String title = event.getView().getTitle();
+
+                // Hub GUI — cancel ALL clicks, route to hub handler
                 if (title.equals(hubTitle)) {
                     event.setCancelled(true);
                     event.setResult(org.bukkit.event.Event.Result.DENY);
-                    if (!(event.getWhoClicked() instanceof org.bukkit.entity.Player player)) return;
+                    if (!(event.getWhoClicked() instanceof Player player)) return;
                     hubGui.handleClick(player, event.getSlot());
-                } else if (title.equals(guiTitle) || title.startsWith(choiceTitlePrefix)) {
+                    return;
+                }
+
+                // Tree GUI or Choice GUI
+                String guiTitle = configManager.getGuiTitle();
+                if (title.equals(guiTitle) || title.startsWith(choiceTitlePrefix)) {
                     event.setCancelled(true);
                     event.setResult(org.bukkit.event.Event.Result.DENY);
-                    if (!(event.getWhoClicked() instanceof org.bukkit.entity.Player player)) return;
+                    if (!(event.getWhoClicked() instanceof Player player)) return;
                     if (title.startsWith(choiceTitlePrefix)) {
                         String milestoneId = title.substring(choiceTitlePrefix.length());
                         choiceGUI.handleChoice(player, milestoneId, event.getSlot());
                     } else {
-                        gui.handleClick(player, event.getSlot());
+                        treeGui.handleClick(player, event.getSlot());
                     }
                 }
             }
@@ -102,8 +118,9 @@ public final class ProgressTree extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
-            public void onInventoryDrag(org.bukkit.event.inventory.InventoryDragEvent event) {
+            public void onInventoryDrag(InventoryDragEvent event) {
                 String title = event.getView().getTitle();
+                String guiTitle = configManager.getGuiTitle();
                 if (title.equals(hubTitle) || title.equals(guiTitle) || title.startsWith(choiceTitlePrefix)) {
                     event.setCancelled(true);
                     event.setResult(org.bukkit.event.Event.Result.DENY);
@@ -145,3 +162,5 @@ public final class ProgressTree extends JavaPlugin {
     /** Custom leveled logger (NOT java.util.logging — use getLog() to avoid collision with JavaPlugin.getLogger()). */
     public Logger getLog() { return logger; }
 }
+
+</content>

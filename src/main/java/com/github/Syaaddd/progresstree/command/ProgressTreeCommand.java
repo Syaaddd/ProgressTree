@@ -3,7 +3,7 @@ package com.github.Syaaddd.progresstree.command;
 import com.github.Syaaddd.progresstree.ProgressTree;
 import com.github.Syaaddd.progresstree.data.MigrationService;
 import com.github.Syaaddd.progresstree.gui.ChoiceGUI;
-import com.github.Syaaddd.progresstree.gui.ProgressTreeGUI;
+import com.github.Syaaddd.progresstree.gui.CategoryHubGUI;
 import com.github.Syaaddd.progresstree.util.MessageUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -13,12 +13,12 @@ import org.bukkit.entity.Player;
 public class ProgressTreeCommand implements CommandExecutor {
 
     private final ProgressTree plugin;
-    private final ProgressTreeGUI gui;
+    private final CategoryHubGUI hubGui;
     private final ChoiceGUI choiceGUI;
 
     public ProgressTreeCommand(ProgressTree plugin) {
         this.plugin = plugin;
-        this.gui = new ProgressTreeGUI(plugin);
+        this.hubGui = new CategoryHubGUI(plugin);
         this.choiceGUI = new ChoiceGUI(plugin);
     }
 
@@ -35,7 +35,7 @@ public class ProgressTreeCommand implements CommandExecutor {
                     plugin.getConfigManager().getMsgNoPermission()));
                 return true;
             }
-            gui.open(player);
+            hubGui.open(player);
             return true;
         }
 
@@ -64,6 +64,7 @@ public class ProgressTreeCommand implements CommandExecutor {
                 }
                 plugin.reloadConfig();
                 plugin.getConfigManager().load();
+                plugin.getCategoryRegistry().load();
                 player.sendMessage(MessageUtil.color(plugin.getConfigManager().getPrefix() +
                     plugin.getConfigManager().getMsgConfigReloaded()));
             }
@@ -122,8 +123,8 @@ public class ProgressTreeCommand implements CommandExecutor {
         player.sendMessage(MessageUtil.color("&8&m----------------------------------------"));
         player.sendMessage(MessageUtil.color("&b&lProgressTree &7- Help"));
         player.sendMessage(MessageUtil.color("&8&m----------------------------------------"));
-        player.sendMessage(MessageUtil.color("&e/progresstree &7- &fOpen progress tree GUI"));
-        player.sendMessage(MessageUtil.color("&e/progresstree open &7- &fOpen progress tree GUI"));
+        player.sendMessage(MessageUtil.color("&e/progresstree &7- &fOpen category hub"));
+        player.sendMessage(MessageUtil.color("&e/progresstree open &7- &fOpen category hub"));
         player.sendMessage(MessageUtil.color("&e/progresstree check &7- &fCheck your progress"));
         player.sendMessage(MessageUtil.color("&e/progresstree claim <id> &7- &fClaim specific milestone"));
         player.sendMessage(MessageUtil.color("&e/progresstree help &7- &fShow this help menu"));
@@ -140,3 +141,5 @@ public class ProgressTreeCommand implements CommandExecutor {
         return choiceGUI;
     }
 }
+
+</content>

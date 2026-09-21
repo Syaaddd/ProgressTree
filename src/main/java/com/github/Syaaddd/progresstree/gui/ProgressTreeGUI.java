@@ -24,13 +24,16 @@ public class ProgressTreeGUI {
 
     private final ProgressTree plugin;
     private final Map<UUID, Integer> playerPages = new HashMap<>();
+    private final Map<UUID, String> playerCategories = new HashMap<>();
 
     public ProgressTreeGUI(ProgressTree plugin) {
         this.plugin = plugin;
     }
 
     public void open(Player player) {
-        open(player, null, 0);
+        // Default: open hub, not flat tree
+        CategoryHubGUI hub = new CategoryHubGUI(plugin);
+        hub.open(player);
     }
 
     public void open(Player player, int page) {
@@ -53,9 +56,11 @@ public class ProgressTreeGUI {
             com.github.Syaaddd.progresstree.category.Category cat = registry.getCategory(categoryId);
             String catName = cat != null ? cat.getName() : categoryId;
             title = MessageUtil.color("&8ProgressTree » " + catName);
+            playerCategories.put(player.getUniqueId(), categoryId);
         } else {
             allMilestones = cfg.getMilestonesInOrder();
             title = cfg.getGuiTitle();
+            playerCategories.remove(player.getUniqueId());
         }
 
         int perPage = template.length;
@@ -83,7 +88,7 @@ public class ProgressTreeGUI {
             inv.setItem(template[i], item);
         }
 
-        placeNavBar(inv, player, page, totalPages, cfg);
+        placeNavBar(inv, player, page, totalPages, cfg, categoryId != null);
         player.openInventory(inv);
     }
 
@@ -104,8 +109,8 @@ public class ProgressTreeGUI {
         }
     }
 
-    private void placeNavBar(Inventory inv, Player player, int currentPage, int totalPages, ConfigManager cfg) {
-        // Previous page button
+    private void placeNavBar(Inventory inv, Player player, int currentPage, int totalPages, ConfigManager cfg, boolean hasBackButton) {
+        // Previous page button (slot 45)
         ItemStack prevItem;
         if (currentPage > 0) {
             prevItem = new ItemStack(Material.ARROW);
@@ -120,7 +125,16 @@ public class ProgressTreeGUI {
         }
         inv.setItem(cfg.getPrevPageSlot(), prevItem);
 
-        // Player info
+        // Back to Hub button (slot 46) — only in category tree mode
+        if (hasBackButton) {
+            ItemStack backItem = new ItemStack(Material.OAK_DOOR);
+            ItemMeta bm = backItem.getItemMeta();
+            bm.setDisplayName(MessageUtil.color("&e&l◀ Back to Hub"));
+            backItem.setItemMeta(bm);
+            inv.setItem(46, backItem);
+        }
+
+        // Player info (slot 47)
         PlayerData data = plugin.getRepository().getPlayerData(player.getUniqueId());
         ItemStack infoItem = new ItemStack(Material.PLAYER_HEAD);
         ItemMeta im = infoItem.getItemMeta();
@@ -135,21 +149,21 @@ public class ProgressTreeGUI {
         infoItem.setItemMeta(im);
         inv.setItem(cfg.getPlayerInfoSlot(), infoItem);
 
-        // Page indicator
+        // Page indicator (slot 49)
         ItemStack pageItem = new ItemStack(Material.BOOK);
         ItemMeta pgm = pageItem.getItemMeta();
         pgm.setDisplayName(MessageUtil.color("&e&lPage " + (currentPage + 1) + " / " + totalPages));
         pageItem.setItemMeta(pgm);
         inv.setItem(cfg.getPageIndicatorSlot(), pageItem);
 
-        // Close button
+        // Close button (slot 51)
         ItemStack closeItem = new ItemStack(Material.RED_STAINED_GLASS_PANE);
         ItemMeta cm = closeItem.getItemMeta();
         cm.setDisplayName(MessageUtil.color("&c&l✕ Close"));
         closeItem.setItemMeta(cm);
         inv.setItem(cfg.getCloseSlot(), closeItem);
 
-        // Next page button
+        // Next page button (slot 53)
         ItemStack nextItem;
         if (currentPage < totalPages - 1) {
             nextItem = new ItemStack(Material.ARROW);
@@ -169,22 +183,37 @@ public class ProgressTreeGUI {
         ConfigManager cfg = plugin.getConfigManager();
         UUID uuid = player.getUniqueId();
         int currentPage = playerPages.getOrDefault(uuid, 0);
+        String categoryId = playerCategories.get(uuid);
+
         int[] template = cfg.getLayoutTemplate();
-        List<Milestone> allMilestones = cfg.getMilestonesInOrder();
+
+        List<Milestone> allMilestones;
+        if (categoryId != null) {
+            allMilestones = plugin.getCategoryRegistry().getMilestonesForCategory(categoryId);
+        } else {
+            allMilestones = cfg.getMilestonesInOrder();
+        }
+
         int perPage = template.length;
         int totalPages = Math.max(1, (int) Math.ceil((double) allMilestones.size() / perPage));
 
         // Navigation clicks
         if (slot == cfg.getPrevPageSlot()) {
             if (currentPage > 0) {
-                open(player, currentPage - 1);
+                open(player, categoryId, currentPage - 1);
             }
             return;
         }
         if (slot == cfg.getNextPageSlot()) {
             if (currentPage < totalPages - 1) {
-                open(player, currentPage + 1);
+                open(player, categoryId, currentPage + 1);
             }
+            return;
+        }
+        // Back to Hub button (slot 46)
+        if (slot == 46 && categoryId != null) {
+            CategoryHubGUI hub = new CategoryHubGUI(plugin);
+            hub.open(player);
             return;
         }
         if (slot == cfg.getCloseSlot()) {
@@ -215,8 +244,8 @@ public class ProgressTreeGUI {
                         choiceGUI.open(player, milestone.getId());
                     } else {
                         manager.claimMilestone(player, milestone.getId(), null);
-                        // Re-open same page after claim (preserve pagination)
-                        open(player, currentPage);
+                        // Re-open same page + category after claim
+                        open(player, categoryId, currentPage);
                     }
                 }
                 return;

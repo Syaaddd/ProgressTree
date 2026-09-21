@@ -7,10 +7,15 @@ import com.github.Syaaddd.progresstree.milestone.Milestone;
 import com.github.Syaaddd.progresstree.milestone.MilestoneManager;
 import com.github.Syaaddd.progresstree.milestone.MilestoneType;
 import com.github.Syaaddd.progresstree.util.MessageUtil;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -41,7 +46,7 @@ public class ProgressTreeGUI {
 
         Inventory inv = Bukkit.createInventory(null, 54, cfg.getGuiTitle());
 
-        // Fill entire GUI with branch filler first
+        // Fill entire GUI with consistent branch filler
         fillBranchFiller(inv, cfg);
 
         // Place milestone nodes for this page
@@ -61,7 +66,7 @@ public class ProgressTreeGUI {
             inv.setItem(template[i], item);
         }
 
-        // Navigation bar
+        // Navigation bar (bottom row, reserved exclusively)
         placeNavBar(inv, player, page, totalPages, cfg);
 
         player.openInventory(inv);
@@ -195,7 +200,7 @@ public class ProgressTreeGUI {
                         choiceGUI.open(player, milestone.getId());
                     } else {
                         manager.claimMilestone(player, milestone.getId(), null);
-                        // Re-open same page after claim
+                        // Re-open same page after claim (preserve pagination)
                         open(player, currentPage);
                     }
                 }
@@ -209,13 +214,10 @@ public class ProgressTreeGUI {
     }
 
     private ItemStack createMilestoneItem(Milestone milestone, boolean claimed, boolean available, PlayerData data, ConfigManager cfg) {
-        ItemStack item = getItemForType(milestone, claimed, available);
+        ItemStack item = getItemForState(milestone, claimed, available);
         ItemMeta meta = item.getItemMeta();
 
         String customColor = milestone.getDisplayColor();
-        String statusColor = claimed ? cfg.getClaimedColor() :
-                             (available ? cfg.getAvailableColor() : cfg.getLockedColor());
-
         String typeStr = milestone.getType().name().replace("_", " ");
         String amountStr = formatAmount(milestone.getAmount(), milestone.getType());
         String currentStr = getCurrentProgress(data, milestone);
@@ -227,7 +229,7 @@ public class ProgressTreeGUI {
         lore.add(MessageUtil.color("&7------------------------"));
         lore.add(MessageUtil.color("&7Type: &f" + typeStr));
         lore.add(MessageUtil.color("&7Progress: &f" + currentStr + " &7/ &f" + amountStr));
-        lore.add(MessageUtil.color(createProgressBar(progress, cfg)));
+        lore.add(createProgressBarComponent(progress, cfg, currentStr, amountStr));
         lore.add(MessageUtil.color("&7------------------------"));
 
         if (claimed) {
@@ -244,7 +246,7 @@ public class ProgressTreeGUI {
                 }
             }
         } else if (available) {
-            lore.add(MessageUtil.color(statusColor + cfg.getClaimButton()));
+            lore.add(MessageUtil.color(cfg.getAvailableColor() + cfg.getClaimButton()));
             if (milestone.hasChoices()) {
                 lore.add(MessageUtil.color("&e" + cfg.getChooseButton()));
             }
@@ -260,53 +262,92 @@ public class ProgressTreeGUI {
         return item;
     }
 
-    private ItemStack getItemForType(Milestone milestone, boolean claimed, boolean available) {
-        String customIcon = milestone.getIcon();
-
+    /**
+     * State-based icon selection:
+     * - Claimed: EMERALD with enchant glow (distinct from available)
+     * - Available: NETHER_STAR with enchant glow (bright, active) or custom icon from config + glow
+     * - Locked: BARRIER (clearly blocked, not clickable)
+     */
+    private ItemStack getItemForState(Milestone milestone, boolean claimed, boolean available) {
         if (claimed) {
-            return new ItemStack(Material.GOLD_BLOCK);
+            ItemStack item = new ItemStack(Material.EMERALD);
+            ItemMeta meta = item.getItemMeta();
+            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            item.setItemMeta(meta);
+            return item;
         }
 
-        if (!customIcon.isEmpty()) {
-            try {
-                Material customMat = Material.valueOf(customIcon.toUpperCase());
-                return new ItemStack(customMat);
-            } catch (IllegalArgumentException e) {
-                // Invalid material, use default
+        if (available) {
+            String customIcon = milestone.getIcon();
+            Material mat = Material.NETHER_STAR;
+            if (!customIcon.isEmpty()) {
+                try {
+                    mat = Material.valueOf(customIcon.toUpperCase());
+                } catch (IllegalArgumentException ignored) {
+                    // Fall through to default NETHER_STAR
+                }
             }
+            ItemStack item = new ItemStack(mat);
+            ItemMeta meta = item.getItemMeta();
+            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            item.setItemMeta(meta);
+            return item;
         }
 
-        MilestoneType type = milestone.getType();
-        Material material;
-
-        switch (type) {
-            case PLAYTIME -> material = available ? Material.CLOCK : Material.GRAY_STAINED_GLASS_PANE;
-            case BLOCK_BREAK -> material = available ? Material.DIAMOND_PICKAXE : Material.COBBLESTONE;
-            case BLOCK_PLACE -> material = available ? Material.BRICK : Material.COBBLESTONE;
-            case MOB_KILL -> material = available ? Material.ZOMBIE_HEAD : Material.RED_STAINED_GLASS_PANE;
-            case PLAYER_KILL -> material = available ? Material.IRON_SWORD : Material.RED_STAINED_GLASS_PANE;
-            case JOIN -> material = available ? Material.PAPER : Material.WHITE_STAINED_GLASS_PANE;
-            case COMMUNITY_PLAYTIME -> material = available ? Material.NETHER_STAR : Material.PURPLE_STAINED_GLASS_PANE;
-            default -> material = Material.GRAY_STAINED_GLASS_PANE;
-        }
-
-        return new ItemStack(material);
+        // Locked state — always BARRIER
+        return new ItemStack(Material.BARRIER);
     }
 
-    private String createProgressBar(double percentage, ConfigManager cfg) {
+    /**
+     * RGB gradient progress bar using Adventure Component.
+     * 20 segments, ▰/▱ chars, color interpolated green→yellow→red based on percentage.
+     * Format: "▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 1.234 / 5.000 — 24%"
+     */
+    private String createProgressBarComponent(double percentage, ConfigManager cfg, String currentStr, String amountStr) {
         int segments = cfg.getProgressBarSegments();
         int filled = (int) (percentage / 100.0 * segments);
+
         StringBuilder bar = new StringBuilder();
-        bar.append(cfg.getProgressFilledColor());
-        for (int i = 0; i < segments; i++) {
-            if (i < filled) {
-                bar.append(cfg.getProgressFilledChar());
-            } else {
-                bar.append(cfg.getProgressEmptyColor()).append(cfg.getProgressEmptyChar());
-            }
+
+        // Filled segments with gradient color
+        TextColor fillColor = getGradientColor(percentage);
+        String fillHex = String.format("#%02X%02X%02X", fillColor.red(), fillColor.green(), fillColor.blue());
+        bar.append("&").append(fillHex);
+        for (int i = 0; i < filled; i++) {
+            bar.append(cfg.getProgressFilledChar());
         }
-        bar.append(" &f").append(String.format("%.1f", percentage)).append("%");
-        return bar.toString();
+
+        // Empty segments
+        bar.append(cfg.getProgressEmptyColor());
+        for (int i = filled; i < segments; i++) {
+            bar.append(cfg.getProgressEmptyChar());
+        }
+
+        // Raw numbers + percentage
+        bar.append(" &f").append(currentStr).append(" &7/ &f").append(amountStr);
+        bar.append(" &7— &f").append(String.format("%.0f", percentage)).append("%");
+
+        return MessageUtil.color(bar.toString());
+    }
+
+    /**
+     * Interpolate color: 0% = red, 50% = yellow, 100% = green
+     */
+    private TextColor getGradientColor(double percentage) {
+        float p = (float) Math.max(0, Math.min(100, percentage));
+        int r, g;
+        if (p <= 50f) {
+            // Red → Yellow (0-50%)
+            r = 255;
+            g = (int) (255 * (p / 50f));
+        } else {
+            // Yellow → Green (50-100%)
+            r = (int) (255 * ((100f - p) / 50f));
+            g = 255;
+        }
+        return TextColor.color(r, g, 0);
     }
 
     private String getCurrentProgress(PlayerData data, Milestone milestone) {
@@ -358,3 +399,5 @@ public class ProgressTreeGUI {
         return minutes + "m";
     }
 }
+
+</content>

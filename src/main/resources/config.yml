@@ -35,31 +35,34 @@ gui:
   claim-button: "&aClick to Claim"
   choose-button: "&eChoose Reward"
 
-  # Tree layout template — pyramid/branching pattern matching mockup reference
+  # Tree layout template — EXACT pyramid pattern (13 milestones/page)
   # Row 0: 1 node (center apex)
-  # Row 1: 2 nodes (left-center, right-center branches)
-  # Row 2: 3 nodes (left, center, right wider branches)
-  # Row 3: 4 nodes (base anchors spread across bottom)
-  # Total: 10 milestones per page, nav bar on row 5 (slots 45-53)
+  # Row 1: 3 nodes (left, center, right)
+  # Row 2: 4 nodes (far-left, mid-left, mid-right, far-right)
+  # Row 3: 5 nodes (full width base)
+  # Nav bar on row 4 (slots 36-44)
   layout-template:
     - 4      # row 0: center apex
-    - 12     # row 1: left branch
-    - 14     # row 1: right branch
-    - 21     # row 2: far-left
-    - 23     # row 2: center
+    - 11     # row 1: left
+    - 13     # row 1: center
+    - 15     # row 1: right
+    - 19     # row 2: far-left
+    - 21     # row 2: mid-left
+    - 23     # row 2: mid-right
     - 25     # row 2: far-right
-    - 30     # row 3: anchor left
-    - 32     # row 3: anchor mid-left
-    - 34     # row 3: anchor mid-right
-    - 36     # row 3: anchor right
+    - 27     # row 3: anchor left
+    - 29     # row 3: anchor mid-left
+    - 31     # row 3: anchor center
+    - 33     # row 3: anchor mid-right
+    - 35     # row 3: anchor right
 
-  # Navigation bar (row 5, bottom of 54-slot chest)
+  # Navigation bar (row 4, slots 36-44)
   navigation:
-    prev-page-slot: 45
-    player-info-slot: 47
-    page-indicator-slot: 49
-    close-slot: 51
-    next-page-slot: 53
+    prev-page-slot: 36
+    player-info-slot: 38
+    page-indicator-slot: 40
+    close-slot: 42
+    next-page-slot: 44
 
   # Filler items between tree nodes (glass panes as "branches")
   branch-filler:

@@ -40,7 +40,7 @@ gui:
   # Row 1: 3 nodes (left, center, right)
   # Row 2: 4 nodes (far-left, mid-left, mid-right, far-right)
   # Row 3: 5 nodes (full width base)
-  # Nav bar on row 4 (slots 36-44)
+  # Nav bar on row 5 (slots 45-53)
   layout-template:
     - 4      # row 0: center apex
     - 11     # row 1: left
@@ -56,13 +56,13 @@ gui:
     - 33     # row 3: anchor mid-right
     - 35     # row 3: anchor right
 
-  # Navigation bar (row 4, slots 36-44)
+  # Navigation bar (row 5, bottom of 54-slot chest)
   navigation:
-    prev-page-slot: 36
-    player-info-slot: 38
-    page-indicator-slot: 40
-    close-slot: 42
-    next-page-slot: 44
+    prev-page-slot: 45
+    player-info-slot: 47
+    page-indicator-slot: 49
+    close-slot: 51
+    next-page-slot: 53
 
   # Filler items between tree nodes (glass panes as "branches")
   branch-filler:

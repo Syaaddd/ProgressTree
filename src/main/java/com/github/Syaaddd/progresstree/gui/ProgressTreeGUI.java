@@ -7,15 +7,11 @@ import com.github.Syaaddd.progresstree.milestone.Milestone;
 import com.github.Syaaddd.progresstree.milestone.MilestoneManager;
 import com.github.Syaaddd.progresstree.milestone.MilestoneType;
 import com.github.Syaaddd.progresstree.util.MessageUtil;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -223,7 +219,9 @@ public class ProgressTreeGUI {
         String currentStr = getCurrentProgress(data, milestone);
         double progress = getProgress(data, milestone);
 
-        meta.setDisplayName(MessageUtil.color(customColor + "&l" + milestone.getId()));
+        // Claimed uses claimed-color (&e), others use milestone's own color
+        String nameColor = claimed ? cfg.getClaimedColor() : customColor;
+        meta.setDisplayName(MessageUtil.color(nameColor + "&l" + milestone.getId()));
 
         List<String> lore = new ArrayList<>();
         lore.add(MessageUtil.color("&7------------------------"));
@@ -263,46 +261,45 @@ public class ProgressTreeGUI {
     }
 
     /**
-     * State-based icon selection:
-     * - Claimed: EMERALD with enchant glow (distinct from available)
-     * - Available: NETHER_STAR with enchant glow (bright, active) or custom icon from config + glow
-     * - Locked: BARRIER (clearly blocked, not clickable)
+     * State-based icon selection using config icon per milestone:
+     * - Locked: BARRIER (mystery, not yet unlocked)
+     * - Available: config icon + enchantment glint override (active, clickable)
+     * - Claimed: config icon, no glint, claimed-color name (completed)
+     * Fallback to NETHER_STAR if config icon is empty/invalid.
      */
     private ItemStack getItemForState(Milestone milestone, boolean claimed, boolean available) {
-        if (claimed) {
-            ItemStack item = new ItemStack(Material.EMERALD);
-            ItemMeta meta = item.getItemMeta();
-            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            item.setItemMeta(meta);
-            return item;
+        if (!available && !claimed) {
+            return new ItemStack(Material.BARRIER);
         }
 
-        if (available) {
-            String customIcon = milestone.getIcon();
-            Material mat = Material.NETHER_STAR;
-            if (!customIcon.isEmpty()) {
-                try {
-                    mat = Material.valueOf(customIcon.toUpperCase());
-                } catch (IllegalArgumentException ignored) {
-                    // Fall through to default NETHER_STAR
-                }
+        Material mat = resolveMilestoneMaterial(milestone);
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+
+        if (available && !claimed) {
+            meta.setEnchantmentGlintOverride(true);
+        }
+        // Claimed: no glint, name color handled in createMilestoneItem
+
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private Material resolveMilestoneMaterial(Milestone milestone) {
+        String icon = milestone.getIcon();
+        if (icon != null && !icon.isEmpty()) {
+            try {
+                return Material.valueOf(icon.toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                // Invalid material, fall through to default
             }
-            ItemStack item = new ItemStack(mat);
-            ItemMeta meta = item.getItemMeta();
-            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            item.setItemMeta(meta);
-            return item;
         }
-
-        // Locked state — always BARRIER
-        return new ItemStack(Material.BARRIER);
+        return Material.NETHER_STAR;
     }
 
     /**
      * RGB gradient progress bar using Adventure Component.
-     * 20 segments, ▰/▱ chars, color interpolated green→yellow→red based on percentage.
+     * 20 segments, ▰/▱ chars, color interpolated red→yellow→green based on percentage.
      * Format: "▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 1.234 / 5.000 — 24%"
      */
     private String createProgressBarComponent(double percentage, ConfigManager cfg, String currentStr, String amountStr) {

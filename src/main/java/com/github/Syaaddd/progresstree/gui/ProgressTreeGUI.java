@@ -7,6 +7,8 @@ import com.github.Syaaddd.progresstree.milestone.Milestone;
 import com.github.Syaaddd.progresstree.milestone.MilestoneManager;
 import com.github.Syaaddd.progresstree.milestone.MilestoneType;
 import com.github.Syaaddd.progresstree.util.MessageUtil;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -223,15 +225,27 @@ public class ProgressTreeGUI {
         String nameColor = claimed ? cfg.getClaimedColor() : customColor;
         meta.setDisplayName(MessageUtil.color(nameColor + "&l" + milestone.getId()));
 
-        List<String> lore = new ArrayList<>();
-        lore.add(MessageUtil.color("&7------------------------"));
-        lore.add(MessageUtil.color("&7Type: &f" + typeStr));
-        lore.add(MessageUtil.color("&7Progress: &f" + currentStr + " &7/ &f" + amountStr));
-        lore.add(createProgressBarComponent(progress, cfg, currentStr, amountStr));
-        lore.add(MessageUtil.color("&7------------------------"));
+        // Build lore as Adventure Components for proper hex color rendering
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.text("------------------------").color(NamedTextColor.GRAY));
+        lore.add(Component.text("Type: ").color(NamedTextColor.GRAY)
+                .append(Component.text(typeStr).color(NamedTextColor.WHITE)));
+        lore.add(Component.text("Progress: ").color(NamedTextColor.GRAY)
+                .append(Component.text(currentStr).color(NamedTextColor.WHITE))
+                .append(Component.text(" / ").color(NamedTextColor.GRAY))
+                .append(Component.text(amountStr).color(NamedTextColor.WHITE)));
+
+        // Progress bar as Component (not legacy string)
+        lore.add(buildProgressBarComponent(progress, cfg));
+
+        // Raw numbers + percentage as separate component line
+        lore.add(Component.text(currentStr + " / " + amountStr + " — " + String.format("%.0f", progress) + "%")
+                .color(NamedTextColor.WHITE));
+
+        lore.add(Component.text("------------------------").color(NamedTextColor.GRAY));
 
         if (claimed) {
-            lore.add(MessageUtil.color("&a&l✓ CLAIMED"));
+            lore.add(Component.text("✓ CLAIMED").color(NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
             String choiceId = data.getClaimedChoice(milestone.getId());
             if (choiceId != null) {
                 final String finalChoiceId = choiceId;
@@ -240,22 +254,23 @@ public class ProgressTreeGUI {
                     .findFirst()
                     .orElse(null);
                 if (choice != null) {
-                    lore.add(MessageUtil.color("&7Reward: &b" + choice.getName()));
+                    lore.add(Component.text("Reward: ").color(NamedTextColor.GRAY)
+                            .append(Component.text(choice.getName()).color(NamedTextColor.AQUA)));
                 }
             }
         } else if (available) {
-            lore.add(MessageUtil.color(cfg.getAvailableColor() + cfg.getClaimButton()));
+            lore.add(Component.text(cfg.getClaimButton()).color(NamedTextColor.GREEN));
             if (milestone.hasChoices()) {
-                lore.add(MessageUtil.color("&e" + cfg.getChooseButton()));
+                lore.add(Component.text(cfg.getChooseButton()).color(NamedTextColor.YELLOW));
             }
         } else {
-            lore.add(MessageUtil.color("&c🔒 Locked"));
+            lore.add(Component.text("🔒 Locked").color(NamedTextColor.RED));
         }
 
-        lore.add(MessageUtil.color("&7------------------------"));
-        lore.add(MessageUtil.color("&8Click to " + (available ? "claim" : "view")));
+        lore.add(Component.text("------------------------").color(NamedTextColor.GRAY));
+        lore.add(Component.text("Click to " + (available ? "claim" : "view")).color(NamedTextColor.DARK_GRAY));
 
-        meta.setLore(lore);
+        meta.lore(lore);
         item.setItemMeta(meta);
         return item;
     }
@@ -298,35 +313,29 @@ public class ProgressTreeGUI {
     }
 
     /**
-     * RGB gradient progress bar using Adventure Component.
-     * 20 segments, ▰/▱ chars, color interpolated red→yellow→green based on percentage.
-     * Format: "▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 1.234 / 5.000 — 24%"
+     * Build progress bar as Adventure Component with per-segment RGB gradient.
+     * Uses ▰/▱ chars from config, colors interpolated red→yellow→green.
      */
-    private String createProgressBarComponent(double percentage, ConfigManager cfg, String currentStr, String amountStr) {
+    private Component buildProgressBarComponent(double percentage, ConfigManager cfg) {
         int segments = cfg.getProgressBarSegments();
         int filled = (int) (percentage / 100.0 * segments);
 
-        StringBuilder bar = new StringBuilder();
+        Component.Builder builder = Component.text();
 
-        // Filled segments with gradient color
-        TextColor fillColor = getGradientColor(percentage);
-        String fillHex = String.format("#%02X%02X%02X", fillColor.red(), fillColor.green(), fillColor.blue());
-        bar.append("&").append(fillHex);
+        // Filled segments with per-segment gradient color
         for (int i = 0; i < filled; i++) {
-            bar.append(cfg.getProgressFilledChar());
+            double segPct = (filled > 1) ? ((double) i / (filled - 1)) * percentage : percentage;
+            TextColor fillColor = getGradientColor(segPct);
+            builder.append(Component.text(cfg.getProgressFilledChar()).color(fillColor));
         }
 
-        // Empty segments
-        bar.append(cfg.getProgressEmptyColor());
+        // Empty segments with config empty color
+        TextColor emptyColor = parseColor(cfg.getProgressEmptyColor());
         for (int i = filled; i < segments; i++) {
-            bar.append(cfg.getProgressEmptyChar());
+            builder.append(Component.text(cfg.getProgressEmptyChar()).color(emptyColor));
         }
 
-        // Raw numbers + percentage
-        bar.append(" &f").append(currentStr).append(" &7/ &f").append(amountStr);
-        bar.append(" &7— &f").append(String.format("%.0f", percentage)).append("%");
-
-        return MessageUtil.color(bar.toString());
+        return builder.build();
     }
 
     /**
@@ -345,6 +354,35 @@ public class ProgressTreeGUI {
             g = 255;
         }
         return TextColor.color(r, g, 0);
+    }
+
+    /**
+     * Parse legacy color code (&8, &7, etc.) to Adventure TextColor.
+     */
+    private TextColor parseColor(String legacyColor) {
+        if (legacyColor == null || legacyColor.isEmpty()) {
+            return NamedTextColor.DARK_GRAY;
+        }
+        // Map common legacy codes to NamedTextColor
+        return switch (legacyColor) {
+            case "&0" -> NamedTextColor.BLACK;
+            case "&1" -> NamedTextColor.DARK_BLUE;
+            case "&2" -> NamedTextColor.DARK_GREEN;
+            case "&3" -> NamedTextColor.DARK_AQUA;
+            case "&4" -> NamedTextColor.DARK_RED;
+            case "&5" -> NamedTextColor.DARK_PURPLE;
+            case "&6" -> NamedTextColor.GOLD;
+            case "&7" -> NamedTextColor.GRAY;
+            case "&8" -> NamedTextColor.DARK_GRAY;
+            case "&9" -> NamedTextColor.BLUE;
+            case "&a" -> NamedTextColor.GREEN;
+            case "&b" -> NamedTextColor.AQUA;
+            case "&c" -> NamedTextColor.RED;
+            case "&d" -> NamedTextColor.LIGHT_PURPLE;
+            case "&e" -> NamedTextColor.YELLOW;
+            case "&f" -> NamedTextColor.WHITE;
+            default -> NamedTextColor.DARK_GRAY;
+        };
     }
 
     private String getCurrentProgress(PlayerData data, Milestone milestone) {
@@ -396,3 +434,5 @@ public class ProgressTreeGUI {
         return minutes + "m";
     }
 }
+
+</content>

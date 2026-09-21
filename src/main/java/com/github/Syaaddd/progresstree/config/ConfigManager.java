@@ -190,6 +190,7 @@ public class ConfigManager {
 
             String icon = ms.getString("icon", "");
             String displayColor = ms.getString("color", "&6");
+            String category = ms.getString("category", null);
 
             List<MilestoneChoice> choices = new ArrayList<>();
             List<Map<?, ?>> choicesList = ms.getMapList("choices");
@@ -211,7 +212,7 @@ public class ConfigManager {
                 }
             }
 
-            milestones.put(key, new Milestone(key, type, amount, choices, icon, displayColor));
+            milestones.put(key, new Milestone(key, type, amount, choices, icon, displayColor, category));
             validCount++;
         }
 

@@ -1,139 +1,124 @@
-# ProgressTree
+<div align="center">
+
+# 🌳 ProgressTree
 
 **Unlock Your Path, Not Just Rewards.**
 
-A Minecraft server plugin that brings a progression tree system where players choose their own rewards when reaching milestones. Rebranded from MilestoneMP with expanded features, pagination, and automatic config migration.
+The progression tree plugin that lets players *choose* their own destiny —
+visual milestone trees, choice-based rewards, and zero bloat.
+
+[![Version](https://img.shields.io/badge/version-2.0.0-2ea44f?style=flat-square)](#)
+[![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square&logo=openjdk)](#)
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.21+-green?style=flat-square)](#)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](#)
+
+</div>
 
 ---
 
-## Features
+## 💡 Why ProgressTree?
 
-- **Progression Tree GUI** — Visual milestone system with locked, available, and claimed states
-- **Pagination** — Automatic paging with navigation bar (prev/next/player stats/page indicator)
-- **Choice-Based Rewards** — Players pick from multiple reward options per milestone
-- **Configurable Tree Layout** — Custom slot templates, branch fillers, and progress bars
-- **Auto Config Migration** — Seamlessly upgrades old `milestone-slots` configs to the new GUI schema
-- **Multiple Milestone Types**
-  - `PLAYTIME` — Play time tracking (7 levels)
-  - `BLOCK_BREAK` — Blocks broken (7 levels)
-  - `BLOCK_PLACE` — Blocks placed (7 levels)
-  - `MOB_KILL` — Mobs killed (7 levels)
-  - `PLAYER_KILL` — PvP kills
-  - `JOIN` — Login streak
-  - `COMMUNITY_PLAYTIME` — Total server playtime
-- **SQLite & MySQL Support** — Flexible database options
-- **PlaceholderAPI Integration** — Display progress anywhere
-- **Console Command Rewards** — Commands executed via console sender
-- **Migration Service** — Migrate player data from legacy MilestoneMP plugin
-- **Java 21** — Built on modern Java LTS
+Most reward plugins hand players a fixed prize and call it a day. Your players aren't all the same — why should their rewards be?
+
+**ProgressTree** turns grinding into a *decision*. Every milestone unlocks a branch of **reward choices**: the miner takes claim blocks, the trader takes money, the PvP addict takes tokens. Players feel ownership over their progression — and your server gets retention that generic "vote-reward" plugins never deliver.
+
+> Rebranded from **MilestoneMP** with a full feature expansion and one-command data migration.
 
 ---
 
-## Commands
+## ✨ Features
 
-| Command | Description |
-|---------|-------------|
-| `/progresstree` | Open progress tree GUI |
-| `/progresstree open` | Open progress tree GUI |
-| `/progresstree check` | Check current progress |
-| `/progresstree claim <id>` | Claim specific milestone |
-| `/progresstree help` | Show help menu |
-| `/progresstree reload` | Reload configuration (admin) |
-| `/progresstree migrate` | Migrate from MilestoneMP (admin) |
+### 🎮 For Players
+- **Visual Progression Tree GUI** — locked, available, and claimed states at a glance, with animated progress bars `[████████░░] 80%`
+- **Choice-Based Rewards** — every milestone offers multiple rewards; the player decides
+- **7 Milestone Trackers** — playtime, blocks broken/placed, mob kills, PvP kills, login streaks, and global server playtime
+- **Color-Coded Tiers** — 7 tier colors from `&7` to `&5` so progression *feels* like progression
+
+### 🛠️ For Admins
+- **Fully Configurable** — every milestone, icon, color, slot, and message is a config option. Up to 43 display slots for massive trees
+- **Works With Your Economy** — rewards are console commands, so ProgressTree integrates with *any* plugin: Vault economies, claims, tokens, XP, custom items — no dependencies required
+- **SQLite & MySQL** — run it on a SMP or a network; swap backends with one line
+- **PlaceholderAPI** — 11 placeholders to surface progress in scoreboards, scoreboards, holograms, and scoreboards… everywhere
+- **Hot Reload** — `/pt reload` applies config changes without a restart
+- **Legacy Migration** — upgrading from MilestoneMP? One command transfers all player data
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# 1. Drop the jar into /plugins
+# 2. Start your server (Paper/Purpur 1.21+, Java 21)
+# 3. Done — ProgressTree generates sensible defaults on first boot
+```
+
+Then make it yours: configure milestones in `config.yml` and run `/progresstree reload`.
+
+---
+
+## 🧩 Milestone Types
+
+| Type | Tracks | Levels |
+|------|--------|:------:|
+| `PLAYTIME` | Individual playtime | 7 |
+| `BLOCK_BREAK` | Blocks broken | 7 |
+| `BLOCK_PLACE` | Blocks placed | 7 |
+| `MOB_KILL` | Mobs killed | 7 |
+| `PLAYER_KILL` | PvP kills | ✓ |
+| `JOIN` | Login streak (days) | ✓ |
+| `COMMUNITY_PLAYTIME` | Total server playtime | ✓ |
+
+---
+
+## ⌨️ Commands
+
+| Command | Description | Permission |
+|---------|-------------|------------|
+| `/progresstree` | Open the progression tree GUI | `progresstree.open` |
+| `/progresstree check` | View current progress | `progresstree.check` |
+| `/progresstree claim <id>` | Claim a specific milestone | `progresstree.claim` |
+| `/progresstree help` | Show command help | — |
+| `/progresstree reload` | Reload configuration | `progresstree.admin` |
+| `/progresstree migrate` | Migrate from MilestoneMP | `progresstree.admin` |
 
 **Aliases:** `/pt`, `/ptree`
 
 ---
 
-## Permissions
+## 🔐 Permissions
 
 | Permission | Description | Default |
 |------------|-------------|---------|
-| `progresstree.open` | Open progress tree GUI | true |
-| `progresstree.claim` | Claim milestones | true |
-| `progresstree.check` | Check progress | true |
-| `progresstree.admin` | Admin commands (reload, migrate) | op |
+| `progresstree.open` | Open the progress tree GUI | everyone |
+| `progresstree.claim` | Claim milestones | everyone |
+| `progresstree.check` | Check progress | everyone |
+| `progresstree.admin` | Reload & migration commands | op |
 
 ---
 
-## Placeholders
+## 📊 Placeholders (PlaceholderAPI)
 
-| Placeholder | Description |
-|------------|-------------|
+| Placeholder | Output |
+|-------------|--------|
 | `%progresstree_current%` | Current milestone ID |
 | `%progresstree_next%` | Next available milestone |
 | `%progresstree_progress%` | Progress percentage |
-| `%progresstree_playtime%` | Player playtime (Xh Ym) |
+| `%progresstree_playtime%` | Playtime formatted `Xh Ym` |
 | `%progresstree_blocks_broken%` | Blocks broken |
 | `%progresstree_blocks_placed%` | Blocks placed |
 | `%progresstree_mobs_killed%` | Mobs killed |
 | `%progresstree_players_killed%` | PvP kills |
-| `%progresstree_join_days%` | Login streak days |
-| `%progresstree_community_playtime%` | Total server playtime (jam) |
-| `%progresstree_can_claim%` | Can claim (Yes/No) |
+| `%progresstree_join_days%` | Login streak (days) |
+| `%progresstree_community_playtime%` | Total server playtime (hours) |
+| `%progresstree_can_claim%` | Yes / No |
 
 ---
 
-## Configuration
-
-### GUI Layout (v2.0+)
+## ⚙️ Configuration
 
 ```yaml
-gui:
-  title: "&8ProgressTree"
-  available-color: "&a"
-  locked-color: "&7"
-  claimed-color: "&e"
-  claim-button: "&aClick to Claim"
-  choose-button: "&eChoose Reward"
-
-  # Slot template for milestone nodes (max 15 per page)
-  layout-template:
-    - 4
-    - 11
-    - 13
-    - 15
-    - 20
-    - 22
-    - 24
-    - 26
-    - 29
-    - 31
-    - 33
-    - 35
-    - 38
-    - 40
-    - 42
-
-  # Navigation bar slots
-  navigation:
-    prev-page-slot: 45
-    player-info-slot: 47
-    page-indicator-slot: 49
-    close-slot: 51
-    next-page-slot: 53
-
-  # Filler material for empty slots
-  branch-filler:
-    material: GRAY_STAINED_GLASS_PANE
-    name: " "
-
-  # Progress bar in milestone lore
-  progress-bar:
-    segments: 20
-    filled-char: "▰"
-    empty-char: "▱"
-    filled-color: "&b"
-    empty-color: "&8"
-```
-
-### Database & Settings
-
-```yaml
-debug: false
-
 database:
-  type: sqlite
+  type: sqlite        # or: mysql
   host: localhost
   port: 3306
   database: progresstree
@@ -141,58 +126,27 @@ database:
   password: ""
 
 settings:
-  check-interval: 60
-  community-reward-broadcast: true
+  check-interval: 60                    # seconds between progress checks
+  community-reward-broadcast: true      # announce server-wide milestones
 
-messages:
-  prefix: "&8[&bProgressTree&8] "
-  milestone-available: "&aMilestone available! Click to claim."
-  milestone-locked: "&cThis milestone is still locked."
-  milestone-claimed: "&eReward claimed: %reward%"
-  no-milestone: "&cNo milestone available."
-  player-not-found: "&cPlayer not found."
-  config-reloaded: "&aConfiguration reloaded successfully."
-  no-permission: "&cYou don't have permission."
-  already-claimed: "&cThis milestone has already been claimed."
-  milestone-claimed-self: "&eYou claimed: %reward%"
-  data-loading: "&7Loading your progress data..."
-  migration-success: "&aMigration completed successfully!"
-  migration-failed: "&cMigration failed. Check console for details."
-```
-
-### Milestones
-
-```yaml
 milestones:
   PlayTime_1:
     type: PLAYTIME
-    amount: 36000
+    amount: 36000                       # 10 hours
     icon: CLOCK
     color: "&7"
-    choices:
+    choices:                            # ← the player picks one
       - id: pt1_money
         name: "&650 Server Money"
         command: "eco give {player} 50"
       - id: pt1_claim
         name: "&a1000 Claim Blocks"
         command: "adjustbonusclaimblocks {player} 1000"
-
-  Miner_1:
-    type: BLOCK_BREAK
-    amount: 100
-    icon: DIAMOND_PICKAXE
-    color: "&e"
-    choices:
-      - id: m1_pickaxe
-        name: "&eDiamond Pickaxe"
-        command: "give {player} diamond_pickaxe 1"
 ```
 
----
+### 💰 Reward Commands
 
-## Reward System
-
-Rewards are executed as **console commands**. Use `{player}` as placeholder for player name.
+Rewards execute as console commands — `{player}` is replaced automatically. If it has a command, it can be a reward:
 
 ```yaml
 command: "give {player} diamond 10"
@@ -204,78 +158,50 @@ command: "adjustbonusclaimblocks {player} 1000"
 
 ---
 
-## Config Migration
+## 🖥️ GUI Details
 
-Upgrading from v1.x or MilestoneMP? ProgressTree automatically detects the old `gui.milestone-slots` format and migrates it to the new schema on first load. No manual editing needed — old keys are preserved as reference, and new defaults are applied for navigation, branch filler, and progress bar settings.
-
-For player data migration from MilestoneMP, use `/progresstree migrate`.
-
----
-
-## Installation
-
-1. Download the plugin JAR file (requires Java 21+)
-2. Place it in your server's `plugins` folder
-3. Start the server
-4. Configure `config.yml` to your needs
-5. Use `/progresstree reload` to reload config after changes
-
-**Requirements:** Paper/Purpur 1.21+, Java 21+
-
-### Migrating from MilestoneMP
-
-1. Install ProgressTree alongside or replacing MilestoneMP
-2. Run `/progresstree migrate` as admin
-3. All player progress data will be transferred automatically
+- Progress bars rendered in-lore: `[████████░░] 80%`
+- 7-tier color progression per milestone rank
+- Clean layout — empty slots auto-filled with glass panes
+- Instant status feedback: 🔒 Locked / 🟢 Available / 🟡 Claimed
+- Dedicated reward-choice screen for multi-choice milestones
+- Scales to **43 milestone slots** for deep progression trees
 
 ---
 
-## Changelog
+## 🔄 Migrating from MilestoneMP
 
-### Version 2.0.0
-- ✅ Rebranded from MilestoneMP to ProgressTree
-- ✅ Full GUI rework with pagination system
-- ✅ Configurable tree layout templates
-- ✅ Navigation bar with player stats and page indicators
-- ✅ Progress bar visualization in milestone lore
-- ✅ Auto-migration from old config format
-- ✅ Branch filler customization
-- ✅ Migration service for MilestoneMP player data
-- ✅ Expanded milestone tiers to 7 levels per type
-- ✅ Updated to Java 21 and Paper API 1.21.8
-- ✅ New placeholder identifier: `%progresstree_*%`
-- ✅ Added debug mode toggle
-- 🔧 Config schema changed (auto-migrates from v1.x)
+1. Replace the MilestoneMP jar with ProgressTree
+2. Start the server
+3. Run `/progresstree migrate`
 
-### Version 1.0.7 (as MilestoneMP)
-- Fixed: Milestone notification not showing when player completes quest through activities
-- Fixed: Removed break statement to notify all reached milestones
-
-### Version 1.0.6 (as MilestoneMP)
-- Fixed: Choices not loaded from config
-- Fixed: Player data loading to be synchronous
-- Fixed: Milestone claim logic
-- Fixed: Milestone notification spam
-
-### Version 1.0.5 (as MilestoneMP)
-- Initial release with progression tree system
-- Choice-based rewards system
-- Multiple milestone types support
-- SQLite & MySQL support
-- PlaceholderAPI integration
+All player progress transfers automatically. Your players won't lose a single block broken.
 
 ---
 
-## Support
+## 📋 Requirements
 
-- Issues: [GitHub Issues](https://github.com/Syaaddd/ProgressTree/issues)
-- Repository: [github.com/Syaaddd/ProgressTree](https://github.com/Syaaddd/ProgressTree)
+| Requirement | Version |
+|-------------|---------|
+| Server | Paper / Purpur |
+| Minecraft | 1.21+ |
+| Java | 21 |
+| PlaceholderAPI | *(optional)* |
 
 ---
 
-**License:** MIT  
-**Version:** 2.0.0  
-**Author:** Syaaddd  
-**API Version:** 1.21
+## 🐛 Support & Feedback
 
-</content>
+Found a bug or have a feature idea?
+
+📬 **[GitHub Issues](https://github.com/Syaaddd/ProgressTree/issues)** — fast responses, public roadmap.
+
+---
+
+<div align="center">
+
+**License:** MIT &nbsp;•&nbsp; **Version:** 2.0.0 &nbsp;•&nbsp; **Author:** [Syaaddd](https://github.com/Syaaddd)
+
+*Made with ☕ and too many late-night test servers.*
+
+</div>

@@ -1,6 +1,7 @@
 package com.github.Syaaddd.progresstree.gui;
 
 import com.github.Syaaddd.progresstree.ProgressTree;
+import com.github.Syaaddd.progresstree.category.CategoryRegistry;
 import com.github.Syaaddd.progresstree.config.ConfigManager;
 import com.github.Syaaddd.progresstree.data.PlayerData;
 import com.github.Syaaddd.progresstree.milestone.Milestone;
@@ -29,25 +30,43 @@ public class ProgressTreeGUI {
     }
 
     public void open(Player player) {
-        open(player, 0);
+        open(player, null, 0);
     }
 
     public void open(Player player, int page) {
+        open(player, null, page);
+    }
+
+    /**
+     * Open tree GUI, optionally filtered by category.
+     * @param categoryId null = all milestones (legacy flat mode), non-null = category-filtered
+     */
+    public void open(Player player, String categoryId, int page) {
         ConfigManager cfg = plugin.getConfigManager();
+        CategoryRegistry registry = plugin.getCategoryRegistry();
         int[] template = cfg.getLayoutTemplate();
-        List<Milestone> allMilestones = cfg.getMilestonesInOrder();
+
+        List<Milestone> allMilestones;
+        String title;
+        if (categoryId != null && registry != null) {
+            allMilestones = registry.getMilestonesForCategory(categoryId);
+            com.github.Syaaddd.progresstree.category.Category cat = registry.getCategory(categoryId);
+            String catName = cat != null ? cat.getName() : categoryId;
+            title = MessageUtil.color("&8ProgressTree » " + catName);
+        } else {
+            allMilestones = cfg.getMilestonesInOrder();
+            title = cfg.getGuiTitle();
+        }
 
         int perPage = template.length;
         int totalPages = Math.max(1, (int) Math.ceil((double) allMilestones.size() / perPage));
         page = Math.max(0, Math.min(page, totalPages - 1));
         playerPages.put(player.getUniqueId(), page);
 
-        Inventory inv = Bukkit.createInventory(null, 54, cfg.getGuiTitle());
+        Inventory inv = Bukkit.createInventory(null, 54, title);
 
-        // Fill entire GUI with consistent branch filler
         fillBranchFiller(inv, cfg);
 
-        // Place milestone nodes for this page
         PlayerData data = plugin.getRepository().getPlayerData(player.getUniqueId());
         MilestoneManager manager = plugin.getMilestoneManager();
         int startIdx = page * perPage;
@@ -64,9 +83,7 @@ public class ProgressTreeGUI {
             inv.setItem(template[i], item);
         }
 
-        // Navigation bar (bottom row, reserved exclusively)
         placeNavBar(inv, player, page, totalPages, cfg);
-
         player.openInventory(inv);
     }
 

@@ -10,14 +10,20 @@ public class Milestone {
     private final List<MilestoneChoice> choices;
     private final String icon;
     private final String displayColor;
+    private final String category; // nullable — explicit category override
 
     public Milestone(String id, MilestoneType type, int amount, List<MilestoneChoice> choices, String icon, String displayColor) {
+        this(id, type, amount, choices, icon, displayColor, null);
+    }
+
+    public Milestone(String id, MilestoneType type, int amount, List<MilestoneChoice> choices, String icon, String displayColor, String category) {
         this.id = id;
         this.type = type;
         this.amount = amount;
         this.choices = choices;
         this.icon = icon;
         this.displayColor = displayColor;
+        this.category = category;
     }
 
     public String getId() { return id; }
@@ -27,4 +33,5 @@ public class Milestone {
     public boolean hasChoices() { return choices != null && !choices.isEmpty(); }
     public String getIcon() { return icon; }
     public String getDisplayColor() { return displayColor; }
+    public String getCategory() { return category; }
 }

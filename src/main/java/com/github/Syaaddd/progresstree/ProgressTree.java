@@ -1,5 +1,6 @@
 package com.github.Syaaddd.progresstree;
 
+import com.github.Syaaddd.progresstree.category.CategoryRegistry;
 import com.github.Syaaddd.progresstree.command.ProgressTreeCommand;
 import com.github.Syaaddd.progresstree.command.ProgressTreeTabCompleter;
 import com.github.Syaaddd.progresstree.config.ConfigManager;
@@ -8,6 +9,7 @@ import com.github.Syaaddd.progresstree.data.ProgressRepository;
 import com.github.Syaaddd.progresstree.data.MigrationService;
 import com.github.Syaaddd.progresstree.gui.ChoiceGUI;
 import com.github.Syaaddd.progresstree.gui.ProgressTreeGUI;
+import com.github.Syaaddd.progresstree.gui.CategoryHubGUI;
 import com.github.Syaaddd.progresstree.event.ProgressUpdateListener;
 import com.github.Syaaddd.progresstree.listener.EventListeners;
 import com.github.Syaaddd.progresstree.listener.PlaytimeTracker;
@@ -22,6 +24,7 @@ public final class ProgressTree extends JavaPlugin {
     private DatabaseManager databaseManager;
     private ProgressRepository repository;
     private MilestoneManager milestoneManager;
+    private CategoryRegistry categoryRegistry;
     private Logger logger;
 
     @Override
@@ -52,6 +55,10 @@ public final class ProgressTree extends JavaPlugin {
         repository = new ProgressRepository(this);
         milestoneManager = new MilestoneManager(this);
 
+        // Category registry (loads gui.categories from config, resolves milestones)
+        categoryRegistry = new CategoryRegistry(this);
+        categoryRegistry.load();
+
         // Command registration
         ProgressTreeCommand command = new ProgressTreeCommand(this);
         getCommand("progresstree").setExecutor(command);
@@ -63,16 +70,23 @@ public final class ProgressTree extends JavaPlugin {
 
         // GUI click/drag handlers
         ProgressTreeGUI gui = new ProgressTreeGUI(this);
+        CategoryHubGUI hubGui = new CategoryHubGUI(this);
         ChoiceGUI choiceGUI = command.getChoiceGUI();
 
         String guiTitle = configManager.getGuiTitle();
+        String hubTitle = com.github.Syaaddd.progresstree.util.MessageUtil.color("&8ProgressTree");
         String choiceTitlePrefix = com.github.Syaaddd.progresstree.util.MessageUtil.color("&8Choose Reward - ");
 
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
             public void onInventoryClick(org.bukkit.event.inventory.InventoryClickEvent event) {
                 String title = event.getView().getTitle();
-                if (title.equals(guiTitle) || title.startsWith(choiceTitlePrefix)) {
+                if (title.equals(hubTitle)) {
+                    event.setCancelled(true);
+                    event.setResult(org.bukkit.event.Event.Result.DENY);
+                    if (!(event.getWhoClicked() instanceof org.bukkit.entity.Player player)) return;
+                    hubGui.handleClick(player, event.getSlot());
+                } else if (title.equals(guiTitle) || title.startsWith(choiceTitlePrefix)) {
                     event.setCancelled(true);
                     event.setResult(org.bukkit.event.Event.Result.DENY);
                     if (!(event.getWhoClicked() instanceof org.bukkit.entity.Player player)) return;
@@ -90,7 +104,7 @@ public final class ProgressTree extends JavaPlugin {
             @org.bukkit.event.EventHandler
             public void onInventoryDrag(org.bukkit.event.inventory.InventoryDragEvent event) {
                 String title = event.getView().getTitle();
-                if (title.equals(guiTitle) || title.startsWith(choiceTitlePrefix)) {
+                if (title.equals(hubTitle) || title.equals(guiTitle) || title.startsWith(choiceTitlePrefix)) {
                     event.setCancelled(true);
                     event.setResult(org.bukkit.event.Event.Result.DENY);
                 }
@@ -127,6 +141,7 @@ public final class ProgressTree extends JavaPlugin {
     public DatabaseManager getDatabaseManager() { return databaseManager; }
     public ProgressRepository getRepository() { return repository; }
     public MilestoneManager getMilestoneManager() { return milestoneManager; }
+    public CategoryRegistry getCategoryRegistry() { return categoryRegistry; }
     /** Custom leveled logger (NOT java.util.logging — use getLog() to avoid collision with JavaPlugin.getLogger()). */
     public Logger getLog() { return logger; }
 }

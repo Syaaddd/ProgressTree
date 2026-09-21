@@ -320,22 +320,22 @@ public class ProgressTreeGUI {
         int segments = cfg.getProgressBarSegments();
         int filled = (int) (percentage / 100.0 * segments);
 
-        Component.Builder builder = Component.text();
+        Component bar = Component.empty();
 
         // Filled segments with per-segment gradient color
         for (int i = 0; i < filled; i++) {
             double segPct = (filled > 1) ? ((double) i / (filled - 1)) * percentage : percentage;
             TextColor fillColor = getGradientColor(segPct);
-            builder.append(Component.text(cfg.getProgressFilledChar()).color(fillColor));
+            bar = bar.append(Component.text(cfg.getProgressFilledChar()).color(fillColor));
         }
 
         // Empty segments with config empty color
         TextColor emptyColor = parseColor(cfg.getProgressEmptyColor());
         for (int i = filled; i < segments; i++) {
-            builder.append(Component.text(cfg.getProgressEmptyChar()).color(emptyColor));
+            bar = bar.append(Component.text(cfg.getProgressEmptyChar()).color(emptyColor));
         }
 
-        return builder.build();
+        return bar;
     }
 
     /**
@@ -434,5 +434,3 @@ public class ProgressTreeGUI {
         return minutes + "m";
     }
 }
-
-</content>

@@ -2,27 +2,30 @@
 
 **Unlock Your Path, Not Just Rewards.**
 
-A unique Minecraft server plugin that brings a progression tree system where players can choose their own rewards when reaching milestones. Rebranded from MilestoneMP with expanded features and migration support.
+A Minecraft server plugin that brings a progression tree system where players choose their own rewards when reaching milestones. Rebranded from MilestoneMP with expanded features, pagination, and automatic config migration.
 
 ---
 
 ## Features
 
-- **Progression Tree GUI** - Visual milestone system with locked, available, and claimed states
-- **Choice-Based Rewards** - Players choose from multiple reward options per milestone
+- **Progression Tree GUI** — Visual milestone system with locked, available, and claimed states
+- **Pagination** — Automatic paging with navigation bar (prev/next/player stats/page indicator)
+- **Choice-Based Rewards** — Players pick from multiple reward options per milestone
+- **Configurable Tree Layout** — Custom slot templates, branch fillers, and progress bars
+- **Auto Config Migration** — Seamlessly upgrades old `milestone-slots` configs to the new GUI schema
 - **Multiple Milestone Types**
-  - `PLAYTIME` - Play time tracking (7 levels)
-  - `BLOCK_BREAK` - Blocks broken (7 levels)
-  - `BLOCK_PLACE` - Blocks placed (7 levels)
-  - `MOB_KILL` - Mobs killed (7 levels)
-  - `PLAYER_KILL` - PvP kills
-  - `JOIN` - Login streak
-  - `COMMUNITY_PLAYTIME` - Total server playtime
-- **SQLite & MySQL Support** - Flexible database options
-- **PlaceholderAPI Integration** - Display progress anywhere
-- **Console Command Rewards** - Commands executed via console sender
-- **Migration Service** - Migrate data from legacy MilestoneMP plugin
-- **Java 21** - Built on modern Java LTS
+  - `PLAYTIME` — Play time tracking (7 levels)
+  - `BLOCK_BREAK` — Blocks broken (7 levels)
+  - `BLOCK_PLACE` — Blocks placed (7 levels)
+  - `MOB_KILL` — Mobs killed (7 levels)
+  - `PLAYER_KILL` — PvP kills
+  - `JOIN` — Login streak
+  - `COMMUNITY_PLAYTIME` — Total server playtime
+- **SQLite & MySQL Support** — Flexible database options
+- **PlaceholderAPI Integration** — Display progress anywhere
+- **Console Command Rewards** — Commands executed via console sender
+- **Migration Service** — Migrate player data from legacy MilestoneMP plugin
+- **Java 21** — Built on modern Java LTS
 
 ---
 
@@ -73,7 +76,58 @@ A unique Minecraft server plugin that brings a progression tree system where pla
 
 ## Configuration
 
-Example `config.yml`:
+### GUI Layout (v2.0+)
+
+```yaml
+gui:
+  title: "&8ProgressTree"
+  available-color: "&a"
+  locked-color: "&7"
+  claimed-color: "&e"
+  claim-button: "&aClick to Claim"
+  choose-button: "&eChoose Reward"
+
+  # Slot template for milestone nodes (max 15 per page)
+  layout-template:
+    - 4
+    - 11
+    - 13
+    - 15
+    - 20
+    - 22
+    - 24
+    - 26
+    - 29
+    - 31
+    - 33
+    - 35
+    - 38
+    - 40
+    - 42
+
+  # Navigation bar slots
+  navigation:
+    prev-page-slot: 45
+    player-info-slot: 47
+    page-indicator-slot: 49
+    close-slot: 51
+    next-page-slot: 53
+
+  # Filler material for empty slots
+  branch-filler:
+    material: GRAY_STAINED_GLASS_PANE
+    name: " "
+
+  # Progress bar in milestone lore
+  progress-bar:
+    segments: 20
+    filled-char: "▰"
+    empty-char: "▱"
+    filled-color: "&b"
+    empty-color: "&8"
+```
+
+### Database & Settings
 
 ```yaml
 debug: false
@@ -104,20 +158,11 @@ messages:
   data-loading: "&7Loading your progress data..."
   migration-success: "&aMigration completed successfully!"
   migration-failed: "&cMigration failed. Check console for details."
+```
 
-gui:
-  title: "&8ProgressTree"
-  available-color: "&a"
-  locked-color: "&7"
-  claimed-color: "&e"
-  claim-button: "&aClick to Claim"
-  choose-button: "&eChoose Reward"
-  milestone-slots:
-    - 10
-    - 11
-    - 12
-    # ... up to 43 slots for large trees
+### Milestones
 
+```yaml
 milestones:
   PlayTime_1:
     type: PLAYTIME
@@ -131,6 +176,16 @@ milestones:
       - id: pt1_claim
         name: "&a1000 Claim Blocks"
         command: "adjustbonusclaimblocks {player} 1000"
+
+  Miner_1:
+    type: BLOCK_BREAK
+    amount: 100
+    icon: DIAMOND_PICKAXE
+    color: "&e"
+    choices:
+      - id: m1_pickaxe
+        name: "&eDiamond Pickaxe"
+        command: "give {player} diamond_pickaxe 1"
 ```
 
 ---
@@ -139,7 +194,6 @@ milestones:
 
 Rewards are executed as **console commands**. Use `{player}` as placeholder for player name.
 
-**Examples:**
 ```yaml
 command: "give {player} diamond 10"
 command: "eco give {player} 5000"
@@ -150,15 +204,11 @@ command: "adjustbonusclaimblocks {player} 1000"
 
 ---
 
-## GUI Preview
+## Config Migration
 
-The GUI features:
-- Progress bar visual: `[████████░░] 80%`
-- Color-coded items by milestone tier (&7 → &f → &e → &6 → &9 → &d → &5)
-- Empty slots filled with glass panes for clean look
-- Clear status indicators (Locked, Available, Claimed)
-- Choice selection GUI for multiple reward options
-- Support for up to 43 milestone display slots
+Upgrading from v1.x or MilestoneMP? ProgressTree automatically detects the old `gui.milestone-slots` format and migrates it to the new schema on first load. No manual editing needed — old keys are preserved as reference, and new defaults are applied for navigation, branch filler, and progress bar settings.
+
+For player data migration from MilestoneMP, use `/progresstree migrate`.
 
 ---
 
@@ -170,9 +220,10 @@ The GUI features:
 4. Configure `config.yml` to your needs
 5. Use `/progresstree reload` to reload config after changes
 
+**Requirements:** Paper/Purpur 1.21+, Java 21+
+
 ### Migrating from MilestoneMP
 
-If you're upgrading from MilestoneMP:
 1. Install ProgressTree alongside or replacing MilestoneMP
 2. Run `/progresstree migrate` as admin
 3. All player progress data will be transferred automatically
@@ -182,13 +233,19 @@ If you're upgrading from MilestoneMP:
 ## Changelog
 
 ### Version 2.0.0
-- Rebranded from MilestoneMP to ProgressTree
-- Added migration service for MilestoneMP data
-- Expanded milestone tiers to 7 levels per type
-- Updated to Java 21 and Paper API 1.21.8
-- New placeholder identifier: `%progresstree_*%`
-- Enhanced GUI with more display slots
-- Added debug mode toggle
+- ✅ Rebranded from MilestoneMP to ProgressTree
+- ✅ Full GUI rework with pagination system
+- ✅ Configurable tree layout templates
+- ✅ Navigation bar with player stats and page indicators
+- ✅ Progress bar visualization in milestone lore
+- ✅ Auto-migration from old config format
+- ✅ Branch filler customization
+- ✅ Migration service for MilestoneMP player data
+- ✅ Expanded milestone tiers to 7 levels per type
+- ✅ Updated to Java 21 and Paper API 1.21.8
+- ✅ New placeholder identifier: `%progresstree_*%`
+- ✅ Added debug mode toggle
+- 🔧 Config schema changed (auto-migrates from v1.x)
 
 ### Version 1.0.7 (as MilestoneMP)
 - Fixed: Milestone notification not showing when player completes quest through activities
@@ -212,6 +269,7 @@ If you're upgrading from MilestoneMP:
 ## Support
 
 - Issues: [GitHub Issues](https://github.com/Syaaddd/ProgressTree/issues)
+- Repository: [github.com/Syaaddd/ProgressTree](https://github.com/Syaaddd/ProgressTree)
 
 ---
 

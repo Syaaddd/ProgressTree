@@ -358,5 +358,3 @@ public class ProgressTreeGUI {
         return minutes + "m";
     }
 }
-
-</content>

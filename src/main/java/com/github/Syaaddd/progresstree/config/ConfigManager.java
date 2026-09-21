@@ -325,5 +325,3 @@ public class ConfigManager {
     @Deprecated
     public int[] getMilestoneSlots() { return layoutTemplate; }
 }
-
-</content>

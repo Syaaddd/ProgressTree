@@ -1,0 +1,82 @@
+<h2 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Mockup tata letak baru GUI ProgressTree: milestone tersusun seperti pohon bercabang, dengan baris navigasi halaman di bagian bawah.</h2>
+<div style="background: var(--surface-1); border-radius: 12px; padding: 1.25rem; max-width: 440px; margin: 0 auto;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+    <span style="font-size:14px; font-weight:500; color:var(--text-primary);">ProgressTree</span>
+    <span style="font-size:12px; color:var(--text-secondary);">Halaman 2 / 4</span>
+  </div>
+  <div id="pt-grid" style="display:grid; grid-template-columns: repeat(9, 1fr); gap:4px;"></div>
+  <div style="display:flex; gap:14px; align-items:center; margin-top:10px; font-size:12px; color:var(--text-secondary);">
+    <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--fill-success);display:inline-block;"></span>Tersedia</span>
+    <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--text-muted);display:inline-block;"></span>Terkunci</span>
+    <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--fill-warning);display:inline-block;"></span>Diklaim</span>
+  </div>
+</div>
+<script>
+(function(){
+  var rows = 5, cols = 9;
+  var nodes = {
+    '0,4': {type:'claimed'},
+    '1,2': {type:'claimed'},
+    '1,4': {type:'available'},
+    '1,6': {type:'locked'},
+    '2,1': {type:'available'},
+    '2,3': {type:'locked'},
+    '2,5': {type:'locked'},
+    '2,7': {type:'locked'},
+    '3,0': {type:'locked'},
+    '3,2': {type:'locked'},
+    '3,4': {type:'locked'},
+    '3,6': {type:'locked'},
+    '3,8': {type:'locked'}
+  };
+  var nav = {
+    '4,0': {icon:'ti-chevron-left'},
+    '4,2': {icon:'ti-user'},
+    '4,4': {text:'2 / 4'},
+    '4,6': {icon:'ti-x'},
+    '4,8': {icon:'ti-chevron-right'}
+  };
+  var icons = {claimed:'ti-check', available:'ti-star', locked:'ti-lock'};
+  var colors = {
+    claimed: {bg:'var(--bg-warning)', fg:'var(--text-warning)'},
+    available: {bg:'var(--bg-success)', fg:'var(--text-success)'},
+    locked: {bg:'var(--surface-2)', fg:'var(--text-secondary)'}
+  };
+  var grid = document.getElementById('pt-grid');
+  for (var r=0; r<rows; r++){
+    for (var c=0; c<cols; c++){
+      var key = r+','+c;
+      var cell = document.createElement('div');
+      cell.style.aspectRatio = '1';
+      cell.style.borderRadius = '8px';
+      cell.style.display = 'flex';
+      cell.style.alignItems = 'center';
+      cell.style.justifyContent = 'center';
+      if (r === rows-1){
+        cell.style.borderTop = '0.5px solid var(--border)';
+        cell.style.paddingTop = '6px';
+        var navItem = nav[key];
+        if (navItem){
+          if (navItem.text){
+            cell.style.fontSize = '12px';
+            cell.style.fontWeight = '500';
+            cell.style.color = 'var(--text-secondary)';
+            cell.textContent = navItem.text;
+          } else {
+            cell.innerHTML = '<i class="ti ' + navItem.icon + '" style="font-size:18px; color:var(--text-secondary);" aria-hidden="true"></i>';
+          }
+        }
+      } else if (nodes[key]){
+        var n = nodes[key];
+        var col = colors[n.type];
+        cell.style.background = col.bg;
+        cell.innerHTML = '<i class="ti ' + icons[n.type] + '" style="font-size:16px; color:' + col.fg + ';" aria-hidden="true"></i>';
+      } else {
+        cell.style.background = 'var(--surface-2)';
+        cell.style.opacity = '0.5';
+      }
+      grid.appendChild(cell);
+    }
+  }
+})();
+</script>

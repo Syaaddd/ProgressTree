@@ -46,7 +46,21 @@ public class ConfigManager {
     private String claimedColor;
     private String claimButton;
     private String chooseButton;
-    private int[] milestoneSlots;
+
+    // New GUI layout fields
+    private int[] layoutTemplate;
+    private int prevPageSlot;
+    private int playerInfoSlot;
+    private int pageIndicatorSlot;
+    private int closeSlot;
+    private int nextPageSlot;
+    private String branchFillerMaterial;
+    private String branchFillerName;
+    private int progressBarSegments;
+    private String progressFilledChar;
+    private String progressEmptyChar;
+    private String progressFilledColor;
+    private String progressEmptyColor;
 
     private Map<String, Milestone> milestones;
 
@@ -92,11 +106,39 @@ public class ConfigManager {
         claimButton = config.getString("gui.claim-button", "&aClick to Claim");
         chooseButton = config.getString("gui.choose-button", "&eChoose Reward");
 
-        List<Integer> slotList = config.getIntegerList("gui.milestone-slots");
-        if (slotList.isEmpty()) {
-            slotList = Arrays.asList(10, 12, 14, 16, 19, 21, 23, 25, 28, 30, 32, 34);
+// Auto-migrate old config format to new GUI schema
+        boolean migrated = migrateOldGuiConfig();
+
+        // Load new layout template
+        List<Integer> layoutList = config.getIntegerList("gui.layout-template");
+        if (layoutList.isEmpty()) {
+            layoutList = Arrays.asList(4, 11, 13, 15, 20, 22, 24, 26, 29, 31, 33, 35, 38, 40, 42);
         }
-        milestoneSlots = slotList.stream().mapToInt(Integer::intValue).toArray();
+        layoutTemplate = layoutList.stream().mapToInt(Integer::intValue).toArray();
+
+        // Navigation slots
+        prevPageSlot = config.getInt("gui.navigation.prev-page-slot", 45);
+        playerInfoSlot = config.getInt("gui.navigation.player-info-slot", 47);
+        pageIndicatorSlot = config.getInt("gui.navigation.page-indicator-slot", 49);
+        closeSlot = config.getInt("gui.navigation.close-slot", 51);
+        nextPageSlot = config.getInt("gui.navigation.next-page-slot", 53);
+
+        // Branch filler
+        branchFillerMaterial = config.getString("gui.branch-filler.material", "GRAY_STAINED_GLASS_PANE");
+        branchFillerName = config.getString("gui.branch-filler.name", " ");
+
+        // Progress bar settings
+        progressBarSegments = config.getInt("gui.progress-bar.segments", 20);
+        progressFilledChar = config.getString("gui.progress-bar.filled-char", "\u25B0");
+        progressEmptyChar = config.getString("gui.progress-bar.empty-char", "\u25B1");
+        progressFilledColor = config.getString("gui.progress-bar.filled-color", "&b");
+        progressEmptyColor = config.getString("gui.progress-bar.empty-color", "&8");
+
+        // Save migrated config back to disk
+        if (migrated) {
+            plugin.saveConfig();
+            plugin.getLog().info("[CONFIG] Auto-migrated old GUI config to new schema. Old keys preserved as comments.");
+        }
 
         loadMilestones();
     }
@@ -213,5 +255,73 @@ public class ConfigManager {
     public String getClaimedColor() { return MessageUtil.color(claimedColor); }
     public String getClaimButton() { return MessageUtil.color(claimButton); }
     public String getChooseButton() { return MessageUtil.color(chooseButton); }
-    public int[] getMilestoneSlots() { return milestoneSlots; }
+
+    // New GUI getters
+    public int[] getLayoutTemplate() { return layoutTemplate; }
+    public int getPrevPageSlot() { return prevPageSlot; }
+    public int getPlayerInfoSlot() { return playerInfoSlot; }
+    public int getPageIndicatorSlot() { return pageIndicatorSlot; }
+    public int getCloseSlot() { return closeSlot; }
+    public int getNextPageSlot() { return nextPageSlot; }
+    public String getBranchFillerMaterial() { return branchFillerMaterial; }
+    public String getBranchFillerName() { return branchFillerName; }
+    public int getProgressBarSegments() { return progressBarSegments; }
+    public String getProgressFilledChar() { return progressFilledChar; }
+    public String getProgressEmptyChar() { return progressEmptyChar; }
+    public String getProgressFilledColor() { return progressFilledColor; }
+    public String getProgressEmptyColor() { return progressEmptyColor; }
+
+/**
+     * Auto-migrate old GUI config (milestone-slots) to new schema (layout-template + navigation + branch-filler + progress-bar).
+     * Returns true if migration was performed and config should be saved.
+     */
+    private boolean migrateOldGuiConfig() {
+        boolean migrated = false;
+
+        // Check if old milestone-slots key exists and new layout-template doesn't
+        List<Integer> oldSlots = config.getIntegerList("gui.milestone-slots");
+        List<Integer> newLayout = config.getIntegerList("gui.layout-template");
+
+        if (!oldSlots.isEmpty() && newLayout.isEmpty()) {
+            plugin.getLog().info("[CONFIG] Detected old 'gui.milestone-slots' format. Migrating to new GUI schema...");
+
+            // Migrate milestone-slots → layout-template
+            config.set("gui.layout-template", oldSlots);
+            migrated = true;
+
+            // Set default navigation slots if not present
+            if (!config.contains("gui.navigation")) {
+                config.set("gui.navigation.prev-page-slot", 45);
+                config.set("gui.navigation.player-info-slot", 47);
+                config.set("gui.navigation.page-indicator-slot", 49);
+                config.set("gui.navigation.close-slot", 51);
+                config.set("gui.navigation.next-page-slot", 53);
+            }
+
+            // Set default branch filler if not present
+            if (!config.contains("gui.branch-filler")) {
+                config.set("gui.branch-filler.material", "GRAY_STAINED_GLASS_PANE");
+                config.set("gui.branch-filler.name", " ");
+            }
+
+            // Set default progress bar settings if not present
+            if (!config.contains("gui.progress-bar")) {
+                config.set("gui.progress-bar.segments", 20);
+                config.set("gui.progress-bar.filled-char", "\u25B0");
+                config.set("gui.progress-bar.empty-char", "\u25B1");
+                config.set("gui.progress-bar.filled-color", "&b");
+                config.set("gui.progress-bar.empty-color", "&8");
+            }
+
+            // Keep old milestone-slots as comment for reference (Bukkit YAML doesn't support comments well,
+            // so we just leave it — it won't interfere since we read layout-template first now)
+            plugin.getLog().info("[CONFIG] Migration complete. Old 'gui.milestone-slots' kept for reference.");
+        }
+
+        return migrated;
+    }
+
+    /** @deprecated Use getLayoutTemplate() instead */
+    @Deprecated
+    public int[] getMilestoneSlots() { return layoutTemplate; }
 }

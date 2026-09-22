@@ -125,16 +125,16 @@ public class ProgressTreeGUI {
         }
         inv.setItem(cfg.getPrevPageSlot(), prevItem);
 
-        // Back to Hub button (slot 46) — only in category tree mode
+        // Back to Hub button (slot 47) — only in category tree mode
         if (hasBackButton) {
             ItemStack backItem = new ItemStack(Material.OAK_DOOR);
             ItemMeta bm = backItem.getItemMeta();
             bm.setDisplayName(MessageUtil.color("&e&l◀ Back to Hub"));
             backItem.setItemMeta(bm);
-            inv.setItem(46, backItem);
+            inv.setItem(47, backItem);
         }
 
-        // Player info (slot 47)
+        // Player info (slot 48 when back button present, else 47)
         PlayerData data = plugin.getRepository().getPlayerData(player.getUniqueId());
         ItemStack infoItem = new ItemStack(Material.PLAYER_HEAD);
         ItemMeta im = infoItem.getItemMeta();
@@ -147,7 +147,8 @@ public class ProgressTreeGUI {
         infoLore.add(MessageUtil.color("&7PvP Kills: &f" + (data != null ? data.getPlayersKilled() : 0)));
         im.setLore(infoLore);
         infoItem.setItemMeta(im);
-        inv.setItem(cfg.getPlayerInfoSlot(), infoItem);
+        int infoSlot = hasBackButton ? 48 : cfg.getPlayerInfoSlot();
+        inv.setItem(infoSlot, infoItem);
 
         // Page indicator (slot 49)
         ItemStack pageItem = new ItemStack(Material.BOOK);
@@ -210,8 +211,8 @@ public class ProgressTreeGUI {
             }
             return;
         }
-        // Back to Hub button (slot 46)
-        if (slot == 46 && categoryId != null) {
+        // Back to Hub button (slot 47)
+        if (slot == 47 && categoryId != null) {
             CategoryHubGUI hub = new CategoryHubGUI(plugin);
             hub.open(player);
             return;
@@ -221,7 +222,8 @@ public class ProgressTreeGUI {
             return;
         }
         // Info and page indicator slots — no action
-        if (slot == cfg.getPlayerInfoSlot() || slot == cfg.getPageIndicatorSlot()) {
+        int activeInfoSlot = (categoryId != null) ? 48 : cfg.getPlayerInfoSlot();
+        if (slot == activeInfoSlot || slot == cfg.getPageIndicatorSlot()) {
             return;
         }
 

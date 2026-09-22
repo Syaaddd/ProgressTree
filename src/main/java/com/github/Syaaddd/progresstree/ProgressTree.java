@@ -100,9 +100,11 @@ public final class ProgressTree extends JavaPlugin {
                     return;
                 }
 
-                // Tree GUI or Choice GUI
+                // Tree GUI or Choice GUI — match by prefix since category trees have dynamic titles
                 String guiTitle = configManager.getGuiTitle();
-                if (title.equals(guiTitle) || title.startsWith(choiceTitlePrefix)) {
+                String treePrefix = MessageUtil.color("&8ProgressTree ");
+                boolean isTreeGui = title.equals(guiTitle) || title.startsWith(treePrefix);
+                if (isTreeGui || title.startsWith(choiceTitlePrefix)) {
                     event.setCancelled(true);
                     event.setResult(org.bukkit.event.Event.Result.DENY);
                     if (!(event.getWhoClicked() instanceof Player player)) return;
@@ -121,7 +123,9 @@ public final class ProgressTree extends JavaPlugin {
             public void onInventoryDrag(InventoryDragEvent event) {
                 String title = event.getView().getTitle();
                 String guiTitle = configManager.getGuiTitle();
-                if (title.equals(hubTitle) || title.equals(guiTitle) || title.startsWith(choiceTitlePrefix)) {
+                String treePrefixDrag = MessageUtil.color("&8ProgressTree ");
+                boolean isTreeGuiDrag = title.equals(guiTitle) || title.startsWith(treePrefixDrag);
+                if (title.equals(hubTitle) || isTreeGuiDrag || title.startsWith(choiceTitlePrefix)) {
                     event.setCancelled(true);
                     event.setResult(org.bukkit.event.Event.Result.DENY);
                 }
@@ -162,5 +166,3 @@ public final class ProgressTree extends JavaPlugin {
     /** Custom leveled logger (NOT java.util.logging — use getLog() to avoid collision with JavaPlugin.getLogger()). */
     public Logger getLog() { return logger; }
 }
-
-</content>

@@ -141,5 +141,3 @@ public class ProgressTreeCommand implements CommandExecutor {
         return choiceGUI;
     }
 }
-
-</content>

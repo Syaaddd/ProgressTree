@@ -1,16 +1,19 @@
 package com.github.Syaaddd.progresstree.gui;
 
 import com.github.Syaaddd.progresstree.ProgressTree;
+import com.github.Syaaddd.progresstree.category.Category;
 import com.github.Syaaddd.progresstree.category.CategoryRegistry;
 import com.github.Syaaddd.progresstree.config.ConfigManager;
 import com.github.Syaaddd.progresstree.data.PlayerData;
 import com.github.Syaaddd.progresstree.milestone.Milestone;
+import com.github.Syaaddd.progresstree.milestone.MilestoneChoice;
 import com.github.Syaaddd.progresstree.milestone.MilestoneManager;
 import com.github.Syaaddd.progresstree.milestone.MilestoneType;
 import com.github.Syaaddd.progresstree.util.MessageUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -20,55 +23,53 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 
+/**
+ * Category tree GUI (v2.1.0). ALWAYS scoped to a category — the legacy
+ * flat "all milestones in one list" mode was REMOVED because clicking
+ * Next Page on a category tree could fall back into the old GUI
+ * (session maps were per-instance and state was lost).
+ *
+ * Navigation context now travels with the inventory itself via {@link GuiHolder},
+ * so shared/instance state can no longer desync.
+ */
 public class ProgressTreeGUI {
 
     private final ProgressTree plugin;
-    private final Map<UUID, Integer> playerPages = new HashMap<>();
-    private final Map<UUID, String> playerCategories = new HashMap<>();
 
     public ProgressTreeGUI(ProgressTree plugin) {
         this.plugin = plugin;
     }
 
+    /** Entry point used by external callers (commands): always show the hub. */
     public void open(Player player) {
-        // Default: open hub, not flat tree
-        CategoryHubGUI hub = new CategoryHubGUI(plugin);
-        hub.open(player);
-    }
-
-    public void open(Player player, int page) {
-        open(player, null, page);
+        plugin.getHubGui().open(player);
     }
 
     /**
-     * Open tree GUI, optionally filtered by category.
-     * @param categoryId null = all milestones (legacy flat mode), non-null = category-filtered
+     * Open the tree for a category at the given 0-based page.
+     * Falls back to the hub if the category no longer exists.
      */
     public void open(Player player, String categoryId, int page) {
-        ConfigManager cfg = plugin.getConfigManager();
         CategoryRegistry registry = plugin.getCategoryRegistry();
-        int[] template = cfg.getLayoutTemplate();
-
-        List<Milestone> allMilestones;
-        String title;
-        if (categoryId != null && registry != null) {
-            allMilestones = registry.getMilestonesForCategory(categoryId);
-            com.github.Syaaddd.progresstree.category.Category cat = registry.getCategory(categoryId);
-            String catName = cat != null ? cat.getName() : categoryId;
-            title = MessageUtil.color("&8ProgressTree » " + catName);
-            playerCategories.put(player.getUniqueId(), categoryId);
-        } else {
-            allMilestones = cfg.getMilestonesInOrder();
-            title = cfg.getGuiTitle();
-            playerCategories.remove(player.getUniqueId());
+        Category cat = (categoryId != null) ? registry.getCategory(categoryId) : null;
+        if (cat == null) {
+            plugin.getLog().warn("[GUI] Category '" + categoryId + "' not found - opening hub instead.");
+            plugin.getHubGui().open(player);
+            return;
         }
 
-        int perPage = template.length;
-        int totalPages = Math.max(1, (int) Math.ceil((double) allMilestones.size() / perPage));
-        page = Math.max(0, Math.min(page, totalPages - 1));
-        playerPages.put(player.getUniqueId(), page);
+        ConfigManager cfg = plugin.getConfigManager();
+        int[] template = cfg.getLayoutTemplate();
+        List<Milestone> milestones = registry.getMilestonesForCategory(categoryId);
 
-        Inventory inv = Bukkit.createInventory(null, 54, title);
+        int perPage = Math.max(1, template.length);
+        int totalPages = Math.max(1, (int) Math.ceil((double) milestones.size() / perPage));
+        page = Math.max(0, Math.min(page, totalPages - 1));
+
+        GuiHolder holder = GuiHolder.tree(categoryId, page);
+        String title = MessageUtil.color(cfg.getGuiTitle() + " \u00bb " + cat.getName());
+        Inventory inv = Bukkit.createInventory(holder, 54, title);
+        holder.attach(inv);
 
         fillBranchFiller(inv, cfg);
 
@@ -78,17 +79,16 @@ public class ProgressTreeGUI {
 
         for (int i = 0; i < template.length; i++) {
             int msIndex = startIdx + i;
-            if (msIndex >= allMilestones.size()) break;
+            if (msIndex >= milestones.size()) break;
 
-            Milestone milestone = allMilestones.get(msIndex);
+            Milestone milestone = milestones.get(msIndex);
             boolean claimed = data != null && data.hasClaimed(milestone.getId());
             boolean available = data != null && manager.hasReached(data, milestone);
 
-            ItemStack item = createMilestoneItem(milestone, claimed, available, data, cfg);
-            inv.setItem(template[i], item);
+            inv.setItem(template[i], createMilestoneItem(milestone, claimed, available, data, cfg, cat));
         }
 
-        placeNavBar(inv, player, page, totalPages, cfg, categoryId != null);
+        placeNavBar(inv, player, page, totalPages, cfg, milestones, cat, data);
         player.openInventory(inv);
     }
 
@@ -104,178 +104,164 @@ public class ProgressTreeGUI {
         meta.setDisplayName(MessageUtil.color(cfg.getBranchFillerName()));
         filler.setItemMeta(meta);
 
-        for (int i = 0; i < 54; i++) {
+        for (int i = 0; i < inv.getSize(); i++) {
             inv.setItem(i, filler);
         }
     }
 
-    private void placeNavBar(Inventory inv, Player player, int currentPage, int totalPages, ConfigManager cfg, boolean hasBackButton) {
-        // Previous page button (slot 45)
-        ItemStack prevItem;
-        if (currentPage > 0) {
-            prevItem = new ItemStack(Material.ARROW);
-            ItemMeta pm = prevItem.getItemMeta();
-            pm.setDisplayName(MessageUtil.color("&a&l◀ Previous Page"));
-            prevItem.setItemMeta(pm);
-        } else {
-            prevItem = new ItemStack(Material.BARRIER);
-            ItemMeta pm = prevItem.getItemMeta();
-            pm.setDisplayName(MessageUtil.color("&7&l◀ First Page"));
-            prevItem.setItemMeta(pm);
-        }
-        inv.setItem(cfg.getPrevPageSlot(), prevItem);
+    /** Nav bar (row 5). All slots come from gui.navigation.* — single source of truth. */
+    private void placeNavBar(Inventory inv, Player player, int currentPage, int totalPages,
+                             ConfigManager cfg, List<Milestone> milestones, Category cat, PlayerData data) {
+        // Prev page
+        ItemStack prev = new ItemStack(currentPage > 0 ? Material.ARROW : Material.BARRIER);
+        ItemMeta pm = prev.getItemMeta();
+        pm.setDisplayName(MessageUtil.color(currentPage > 0 ? "&a&l\u25C0 Prev Page" : "&7&l\u25C0 Prev Page"));
+        prev.setItemMeta(pm);
+        inv.setItem(cfg.getPrevPageSlot(), prev);
 
-        // Back to Hub button (slot 47) — only in category tree mode
-        if (hasBackButton) {
-            ItemStack backItem = new ItemStack(Material.OAK_DOOR);
-            ItemMeta bm = backItem.getItemMeta();
-            bm.setDisplayName(MessageUtil.color("&e&l◀ Back to Hub"));
-            backItem.setItemMeta(bm);
-            inv.setItem(47, backItem);
-        }
+        // Back to hub
+        ItemStack back = new ItemStack(Material.OAK_DOOR);
+        ItemMeta bm = back.getItemMeta();
+        bm.setDisplayName(MessageUtil.color("&e&l\u00AB Back to Categories"));
+        bm.setLore(Collections.singletonList(MessageUtil.color("&7Kembali ke pilihan kategori")));
+        back.setItemMeta(bm);
+        inv.setItem(cfg.getBackButtonSlot(), back);
 
-        // Player info (slot 48 when back button present, else 47)
-        PlayerData data = plugin.getRepository().getPlayerData(player.getUniqueId());
-        ItemStack infoItem = new ItemStack(Material.PLAYER_HEAD);
-        ItemMeta im = infoItem.getItemMeta();
+        // Player info
+        ItemStack info = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta im = info.getItemMeta();
         im.setDisplayName(MessageUtil.color("&b&l" + player.getName()));
         List<String> infoLore = new ArrayList<>();
+        infoLore.add(MessageUtil.color("&7Kategori: " + cat.getName()));
+        infoLore.add(MessageUtil.color("&7Diklaim: &f" + countClaimed(data, milestones) + " / " + milestones.size()));
+        infoLore.add(MessageUtil.color("&7Halaman: &f" + (currentPage + 1) + " / " + totalPages));
         infoLore.add(MessageUtil.color("&7Playtime: &f" + formatTime(data != null ? data.getPlaytimeSeconds() : 0)));
         infoLore.add(MessageUtil.color("&7Blocks Broken: &f" + (data != null ? data.getBlocksBroken() : 0)));
         infoLore.add(MessageUtil.color("&7Blocks Placed: &f" + (data != null ? data.getBlocksPlaced() : 0)));
         infoLore.add(MessageUtil.color("&7Mobs Killed: &f" + (data != null ? data.getMobsKilled() : 0)));
         infoLore.add(MessageUtil.color("&7PvP Kills: &f" + (data != null ? data.getPlayersKilled() : 0)));
         im.setLore(infoLore);
-        infoItem.setItemMeta(im);
-        int infoSlot = hasBackButton ? 48 : cfg.getPlayerInfoSlot();
-        inv.setItem(infoSlot, infoItem);
+        info.setItemMeta(im);
+        inv.setItem(cfg.getPlayerInfoSlot(), info);
 
-        // Page indicator (slot 49)
+        // Page indicator
         ItemStack pageItem = new ItemStack(Material.BOOK);
         ItemMeta pgm = pageItem.getItemMeta();
-        pgm.setDisplayName(MessageUtil.color("&e&lPage " + (currentPage + 1) + " / " + totalPages));
+        pgm.setDisplayName(MessageUtil.color("&e&lHalaman " + (currentPage + 1) + " / " + totalPages));
+        pgm.setLore(Collections.singletonList(MessageUtil.color("&7Kategori: " + cat.getName())));
         pageItem.setItemMeta(pgm);
         inv.setItem(cfg.getPageIndicatorSlot(), pageItem);
 
-        // Close button (slot 51)
-        ItemStack closeItem = new ItemStack(Material.RED_STAINED_GLASS_PANE);
-        ItemMeta cm = closeItem.getItemMeta();
-        cm.setDisplayName(MessageUtil.color("&c&l✕ Close"));
-        closeItem.setItemMeta(cm);
-        inv.setItem(cfg.getCloseSlot(), closeItem);
+        // Close
+        ItemStack close = new ItemStack(Material.RED_STAINED_GLASS_PANE);
+        ItemMeta cm = close.getItemMeta();
+        cm.setDisplayName(MessageUtil.color("&c&l\u2715 Close"));
+        close.setItemMeta(cm);
+        inv.setItem(cfg.getCloseSlot(), close);
 
-        // Next page button (slot 53)
-        ItemStack nextItem;
-        if (currentPage < totalPages - 1) {
-            nextItem = new ItemStack(Material.ARROW);
-            ItemMeta nm = nextItem.getItemMeta();
-            nm.setDisplayName(MessageUtil.color("&a&lNext Page ▶"));
-            nextItem.setItemMeta(nm);
-        } else {
-            nextItem = new ItemStack(Material.BARRIER);
-            ItemMeta nm = nextItem.getItemMeta();
-            nm.setDisplayName(MessageUtil.color("&7&lLast Page ▶"));
-            nextItem.setItemMeta(nm);
-        }
-        inv.setItem(cfg.getNextPageSlot(), nextItem);
+        // Next page
+        ItemStack next = new ItemStack(currentPage < totalPages - 1 ? Material.ARROW : Material.BARRIER);
+        ItemMeta nm = next.getItemMeta();
+        nm.setDisplayName(MessageUtil.color(currentPage < totalPages - 1 ? "&a&lNext Page \u25B6" : "&7&lNext Page \u25B6"));
+        next.setItemMeta(nm);
+        inv.setItem(cfg.getNextPageSlot(), next);
     }
 
-    public void handleClick(Player player, int slot) {
-        ConfigManager cfg = plugin.getConfigManager();
-        UUID uuid = player.getUniqueId();
-        int currentPage = playerPages.getOrDefault(uuid, 0);
-        String categoryId = playerCategories.get(uuid);
-
-        int[] template = cfg.getLayoutTemplate();
-
-        List<Milestone> allMilestones;
-        if (categoryId != null) {
-            allMilestones = plugin.getCategoryRegistry().getMilestonesForCategory(categoryId);
-        } else {
-            allMilestones = cfg.getMilestonesInOrder();
+    /**
+     * Route a click inside the category tree. Navigation context comes
+     * from the live inventory holder — category and page can never be lost.
+     */
+    public void handleClick(Player player, Inventory inv, int slot) {
+        if (!(inv.getHolder() instanceof GuiHolder holder) || holder.categoryId() == null) {
+            // Stale GUI or holder lost — recover by opening the hub.
+            plugin.getHubGui().open(player);
+            return;
         }
 
-        int perPage = template.length;
-        int totalPages = Math.max(1, (int) Math.ceil((double) allMilestones.size() / perPage));
+        String categoryId = holder.categoryId();
+        int currentPage = holder.page();
+        ConfigManager cfg = plugin.getConfigManager();
+        int[] template = cfg.getLayoutTemplate();
+        List<Milestone> milestones = plugin.getCategoryRegistry().getMilestonesForCategory(categoryId);
 
-        // Navigation clicks
+        int perPage = Math.max(1, template.length);
+        int totalPages = Math.max(1, (int) Math.ceil((double) milestones.size() / perPage));
+
+        // --- Navigation ---
         if (slot == cfg.getPrevPageSlot()) {
-            if (currentPage > 0) {
-                open(player, categoryId, currentPage - 1);
-            }
+            if (currentPage > 0) open(player, categoryId, currentPage - 1);
             return;
         }
         if (slot == cfg.getNextPageSlot()) {
-            if (currentPage < totalPages - 1) {
-                open(player, categoryId, currentPage + 1);
-            }
+            if (currentPage < totalPages - 1) open(player, categoryId, currentPage + 1);
             return;
         }
-        // Back to Hub button (slot 47)
-        if (slot == 47 && categoryId != null) {
-            CategoryHubGUI hub = new CategoryHubGUI(plugin);
-            hub.open(player);
+        if (slot == cfg.getBackButtonSlot()) {
+            plugin.getHubGui().open(player);
             return;
         }
         if (slot == cfg.getCloseSlot()) {
             player.closeInventory();
             return;
         }
-        // Info and page indicator slots — no action
-        int activeInfoSlot = (categoryId != null) ? 48 : cfg.getPlayerInfoSlot();
-        if (slot == activeInfoSlot || slot == cfg.getPageIndicatorSlot()) {
-            return;
+        if (slot == cfg.getPlayerInfoSlot() || slot == cfg.getPageIndicatorSlot()) {
+            return; // display only
         }
 
-        // Milestone node clicks
+        // --- Milestone nodes ---
         int startIdx = currentPage * perPage;
         for (int i = 0; i < template.length; i++) {
-            if (template[i] == slot) {
-                int msIndex = startIdx + i;
-                if (msIndex >= allMilestones.size()) return;
+            if (template[i] != slot) continue;
 
-                Milestone milestone = allMilestones.get(msIndex);
-                PlayerData data = plugin.getRepository().getPlayerData(uuid);
-                MilestoneManager manager = plugin.getMilestoneManager();
-                boolean claimed = data != null && data.hasClaimed(milestone.getId());
-                boolean available = data != null && manager.hasReached(data, milestone);
+            int msIndex = startIdx + i;
+            if (msIndex >= milestones.size()) return; // empty node
 
-                if (available && !claimed) {
-                    if (milestone.hasChoices()) {
-                        ChoiceGUI choiceGUI = new ChoiceGUI(plugin);
-                        choiceGUI.open(player, milestone.getId());
-                    } else {
-                        manager.claimMilestone(player, milestone.getId(), null);
-                        // Re-open same page + category after claim
-                        open(player, categoryId, currentPage);
-                    }
-                }
-                return;
+            Milestone milestone = milestones.get(msIndex);
+            PlayerData data = plugin.getRepository().getPlayerData(player.getUniqueId());
+            MilestoneManager manager = plugin.getMilestoneManager();
+            boolean claimed = data != null && data.hasClaimed(milestone.getId());
+            boolean available = data != null && manager.hasReached(data, milestone);
+
+            if (!available || claimed) return;
+
+            if (milestone.hasChoices()) {
+                plugin.getChoiceGUI().open(player, milestone.getId(), categoryId, currentPage);
+            } else {
+                manager.claimMilestone(player, milestone.getId(), null);
+                open(player, categoryId, currentPage); // stay on same category + page
             }
+            return;
         }
     }
 
-    public int getCurrentPage(UUID uuid) {
-        return playerPages.getOrDefault(uuid, 0);
+    private int countClaimed(PlayerData data, List<Milestone> milestones) {
+        if (data == null) return 0;
+        int count = 0;
+        for (Milestone ms : milestones) {
+            if (data.hasClaimed(ms.getId())) count++;
+        }
+        return count;
     }
 
-    private ItemStack createMilestoneItem(Milestone milestone, boolean claimed, boolean available, PlayerData data, ConfigManager cfg) {
+    // ===================== item rendering =====================
+
+    private ItemStack createMilestoneItem(Milestone milestone, boolean claimed, boolean available,
+                                          PlayerData data, ConfigManager cfg, Category cat) {
         ItemStack item = getItemForState(milestone, claimed, available);
         ItemMeta meta = item.getItemMeta();
 
-        String customColor = milestone.getDisplayColor();
         String typeStr = milestone.getType().name().replace("_", " ");
         String amountStr = formatAmount(milestone.getAmount(), milestone.getType());
         String currentStr = getCurrentProgress(data, milestone);
         double progress = getProgress(data, milestone);
 
-        // Claimed uses claimed-color (&e), others use milestone's own color
-        String nameColor = claimed ? cfg.getClaimedColor() : customColor;
+        String nameColor = claimed ? cfg.getClaimedColor() : milestone.getDisplayColor();
         meta.setDisplayName(MessageUtil.color(nameColor + "&l" + milestone.getId()));
 
-        // Build lore as Adventure Components for proper hex color rendering
         List<Component> lore = new ArrayList<>();
         lore.add(Component.text("------------------------").color(NamedTextColor.GRAY));
+        lore.add(Component.text("Kategori: ").color(NamedTextColor.GRAY)
+                .append(Component.text(MessageUtil.strip(cat.getName())).color(NamedTextColor.WHITE)));
         lore.add(Component.text("Type: ").color(NamedTextColor.GRAY)
                 .append(Component.text(typeStr).color(NamedTextColor.WHITE)));
         lore.add(Component.text("Progress: ").color(NamedTextColor.GRAY)
@@ -283,40 +269,37 @@ public class ProgressTreeGUI {
                 .append(Component.text(" / ").color(NamedTextColor.GRAY))
                 .append(Component.text(amountStr).color(NamedTextColor.WHITE)));
 
-        // Progress bar as Component (not legacy string)
         lore.add(buildProgressBarComponent(progress, cfg));
-
-        // Raw numbers + percentage as separate component line
-        lore.add(Component.text(currentStr + " / " + amountStr + " — " + String.format("%.0f", progress) + "%")
+        lore.add(Component.text(currentStr + " / " + amountStr + " - " + String.format("%.0f", progress) + "%")
                 .color(NamedTextColor.WHITE));
 
         lore.add(Component.text("------------------------").color(NamedTextColor.GRAY));
 
         if (claimed) {
-            lore.add(Component.text("✓ CLAIMED").color(NamedTextColor.GREEN).decorate(net.kyori.adventure.text.format.TextDecoration.BOLD));
-            String choiceId = data.getClaimedChoice(milestone.getId());
+            lore.add(Component.text("\u2713 CLAIMED").color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+            String choiceId = data != null ? data.getClaimedChoice(milestone.getId()) : null;
             if (choiceId != null) {
                 final String finalChoiceId = choiceId;
-                var choice = milestone.getChoices().stream()
-                    .filter(c -> c.getId().equals(finalChoiceId))
-                    .findFirst()
-                    .orElse(null);
+                MilestoneChoice choice = milestone.getChoices().stream()
+                        .filter(c -> c.getId().equals(finalChoiceId))
+                        .findFirst()
+                        .orElse(null);
                 if (choice != null) {
                     lore.add(Component.text("Reward: ").color(NamedTextColor.GRAY)
                             .append(Component.text(choice.getName()).color(NamedTextColor.AQUA)));
                 }
             }
         } else if (available) {
-            lore.add(Component.text(cfg.getClaimButton()).color(NamedTextColor.GREEN));
+            lore.add(Component.text(MessageUtil.strip(cfg.getClaimButton())).color(NamedTextColor.GREEN));
             if (milestone.hasChoices()) {
-                lore.add(Component.text(cfg.getChooseButton()).color(NamedTextColor.YELLOW));
+                lore.add(Component.text(MessageUtil.strip(cfg.getChooseButton())).color(NamedTextColor.YELLOW));
             }
         } else {
-            lore.add(Component.text("🔒 Locked").color(NamedTextColor.RED));
+            lore.add(Component.text("\uD83D\uDD12 Locked").color(NamedTextColor.RED));
         }
 
         lore.add(Component.text("------------------------").color(NamedTextColor.GRAY));
-        lore.add(Component.text("Click to " + (available ? "claim" : "view")).color(NamedTextColor.DARK_GRAY));
+        lore.add(Component.text(available ? "Klik untuk klaim" : "Belum terbuka").color(NamedTextColor.DARK_GRAY));
 
         meta.lore(lore);
         item.setItemMeta(meta);
@@ -324,26 +307,20 @@ public class ProgressTreeGUI {
     }
 
     /**
-     * State-based icon selection using config icon per milestone:
-     * - Locked: BARRIER (mystery, not yet unlocked)
-     * - Available: config icon + enchantment glint override (active, clickable)
-     * - Claimed: config icon, no glint, claimed-color name (completed)
-     * Fallback to NETHER_STAR if config icon is empty/invalid.
+     * - Locked: BARRIER (mystery)
+     * - Available: config icon + enchant glint
+     * - Claimed: config icon, no glint, claimed-color name
+     * Fallback NETHER_STAR when the config icon is empty/invalid/non-item.
      */
     private ItemStack getItemForState(Milestone milestone, boolean claimed, boolean available) {
         if (!available && !claimed) {
             return new ItemStack(Material.BARRIER);
         }
-
-        Material mat = resolveMilestoneMaterial(milestone);
-        ItemStack item = new ItemStack(mat);
+        ItemStack item = new ItemStack(resolveMilestoneMaterial(milestone));
         ItemMeta meta = item.getItemMeta();
-
         if (available && !claimed) {
             meta.setEnchantmentGlintOverride(true);
         }
-        // Claimed: no glint, name color handled in createMilestoneItem
-
         item.setItemMeta(meta);
         return item;
     }
@@ -352,66 +329,50 @@ public class ProgressTreeGUI {
         String icon = milestone.getIcon();
         if (icon != null && !icon.isEmpty()) {
             try {
-                return Material.valueOf(icon.toUpperCase());
+                Material mat = Material.valueOf(icon.toUpperCase());
+                if (mat.isItem()) return mat;
             } catch (IllegalArgumentException ignored) {
-                // Invalid material, fall through to default
+                // fall through to default
             }
         }
         return Material.NETHER_STAR;
     }
 
-    /**
-     * Build progress bar as Adventure Component with per-segment RGB gradient.
-     * Uses ▰/▱ chars from config, colors interpolated red→yellow→green.
-     */
+    /** Progress bar as Adventure Component, per-segment red→yellow→green gradient. */
     private Component buildProgressBarComponent(double percentage, ConfigManager cfg) {
         int segments = cfg.getProgressBarSegments();
-        int filled = (int) (percentage / 100.0 * segments);
+        int filled = (int) Math.round(percentage / 100.0 * segments);
+        filled = Math.max(0, Math.min(segments, filled));
 
         Component bar = Component.empty();
-
-        // Filled segments with per-segment gradient color
-        for (int i = 0; i < filled; i++) {
-            double segPct = (filled > 1) ? ((double) i / (filled - 1)) * percentage : percentage;
-            TextColor fillColor = getGradientColor(segPct);
-            bar = bar.append(Component.text(cfg.getProgressFilledChar()).color(fillColor));
+        for (int i = 0; i < segments; i++) {
+            if (i < filled) {
+                double segPct = ((double) (i + 1) / segments) * percentage;
+                bar = bar.append(Component.text(cfg.getProgressFilledChar()).color(getGradientColor(segPct)));
+            } else {
+                bar = bar.append(Component.text(cfg.getProgressEmptyChar()).color(parseColor(cfg.getProgressEmptyColor())));
+            }
         }
-
-        // Empty segments with config empty color
-        TextColor emptyColor = parseColor(cfg.getProgressEmptyColor());
-        for (int i = filled; i < segments; i++) {
-            bar = bar.append(Component.text(cfg.getProgressEmptyChar()).color(emptyColor));
-        }
-
         return bar;
     }
 
-    /**
-     * Interpolate color: 0% = red, 50% = yellow, 100% = green
-     */
     private TextColor getGradientColor(double percentage) {
         float p = (float) Math.max(0, Math.min(100, percentage));
         int r, g;
         if (p <= 50f) {
-            // Red → Yellow (0-50%)
             r = 255;
             g = (int) (255 * (p / 50f));
         } else {
-            // Yellow → Green (50-100%)
             r = (int) (255 * ((100f - p) / 50f));
             g = 255;
         }
         return TextColor.color(r, g, 0);
     }
 
-    /**
-     * Parse legacy color code (&8, &7, etc.) to Adventure TextColor.
-     */
     private TextColor parseColor(String legacyColor) {
         if (legacyColor == null || legacyColor.isEmpty()) {
             return NamedTextColor.DARK_GRAY;
         }
-        // Map common legacy codes to NamedTextColor
         return switch (legacyColor) {
             case "&0" -> NamedTextColor.BLACK;
             case "&1" -> NamedTextColor.DARK_BLUE;
@@ -435,7 +396,6 @@ public class ProgressTreeGUI {
 
     private String getCurrentProgress(PlayerData data, Milestone milestone) {
         if (data == null) return "0";
-
         return switch (milestone.getType()) {
             case PLAYTIME -> formatTime(data.getPlaytimeSeconds());
             case BLOCK_BREAK -> String.valueOf(data.getBlocksBroken());
@@ -444,13 +404,11 @@ public class ProgressTreeGUI {
             case PLAYER_KILL -> String.valueOf(data.getPlayersKilled());
             case JOIN -> String.valueOf(data.getJoinDays());
             case COMMUNITY_PLAYTIME -> formatTime(plugin.getRepository().getTotalCommunityPlaytime());
-            default -> "0";
         };
     }
 
     private double getProgress(PlayerData data, Milestone milestone) {
         if (data == null) return 0;
-
         int current = switch (milestone.getType()) {
             case PLAYTIME -> data.getPlaytimeSeconds();
             case BLOCK_BREAK -> data.getBlocksBroken();
@@ -459,16 +417,15 @@ public class ProgressTreeGUI {
             case PLAYER_KILL -> data.getPlayersKilled();
             case JOIN -> data.getJoinDays();
             case COMMUNITY_PLAYTIME -> plugin.getRepository().getTotalCommunityPlaytime();
-            default -> 0;
         };
-
         int required = milestone.getAmount();
+        if (required <= 0) return 0;
         return Math.min(100.0, (double) current / required * 100);
     }
 
     private String formatAmount(int amount, MilestoneType type) {
         return switch (type) {
-            case PLAYTIME -> formatTime(amount);
+            case PLAYTIME, COMMUNITY_PLAYTIME -> formatTime(amount);
             default -> String.valueOf(amount);
         };
     }

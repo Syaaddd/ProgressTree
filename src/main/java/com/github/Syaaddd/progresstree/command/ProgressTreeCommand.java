@@ -2,8 +2,6 @@ package com.github.Syaaddd.progresstree.command;
 
 import com.github.Syaaddd.progresstree.ProgressTree;
 import com.github.Syaaddd.progresstree.data.MigrationService;
-import com.github.Syaaddd.progresstree.gui.ChoiceGUI;
-import com.github.Syaaddd.progresstree.gui.CategoryHubGUI;
 import com.github.Syaaddd.progresstree.util.MessageUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -13,13 +11,9 @@ import org.bukkit.entity.Player;
 public class ProgressTreeCommand implements CommandExecutor {
 
     private final ProgressTree plugin;
-    private final CategoryHubGUI hubGui;
-    private final ChoiceGUI choiceGUI;
 
     public ProgressTreeCommand(ProgressTree plugin) {
         this.plugin = plugin;
-        this.hubGui = new CategoryHubGUI(plugin);
-        this.choiceGUI = new ChoiceGUI(plugin);
     }
 
     @Override
@@ -35,7 +29,7 @@ public class ProgressTreeCommand implements CommandExecutor {
                     plugin.getConfigManager().getMsgNoPermission()));
                 return true;
             }
-            hubGui.open(player);
+            plugin.getHubGui().open(player);
             return true;
         }
 
@@ -135,9 +129,5 @@ public class ProgressTreeCommand implements CommandExecutor {
         }
 
         player.sendMessage(MessageUtil.color("&8&m----------------------------------------"));
-    }
-
-    public ChoiceGUI getChoiceGUI() {
-        return choiceGUI;
     }
 }

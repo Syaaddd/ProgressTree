@@ -11,11 +11,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -23,9 +21,9 @@ import java.util.*;
 
 /**
  * Hub GUI displaying all categories with claim badges and progress summaries.
- * Layout per PRD 5.1:
+ * Layout per PRD 5.1 (4 rows):
  *   Row 0: filler border
- *   Row 1: category icons (slots 10-16)
+ *   Row 1: category icons (gui.hub.category-slots, default 10-16)
  *   Row 2: filler border
  *   Row 3: Stats (slot 31), Close (slot 35)
  */
@@ -39,29 +37,15 @@ public class CategoryHubGUI {
 
     public void open(Player player) {
         CategoryRegistry registry = plugin.getCategoryRegistry();
-        List<Category> cats = registry.getSortedCategories();
-        boolean hideEmpty = plugin.getConfig().getBoolean("gui.hub.hide-empty", true);
+        List<Category> visible = visibleCategories(registry);
 
-        List<Category> visible = new ArrayList<>();
-        for (Category cat : cats) {
-            if (!hideEmpty || registry.hasMilestones(cat.getId())) {
-                visible.add(cat);
-            }
-        }
+        GuiHolder holder = GuiHolder.hub();
+        String title = MessageUtil.color(plugin.getConfigManager().getHubTitle());
+        Inventory inv = Bukkit.createInventory(holder, 36, title); // fixed 4 rows per PRD
+        holder.attach(inv);
 
-        String title = MessageUtil.color(plugin.getConfig().getString("gui.hub.title", "&8ProgressTree"));
-        int rows = 4; // Fixed 4 rows per PRD 5.1
-        Inventory inv = Bukkit.createInventory(null, rows * 9, title);
-
-        // Fill entire inventory with filler first
-        Material fillerMat;
-        try {
-            fillerMat = Material.valueOf(plugin.getConfig()
-                    .getString("gui.hub.filler", "BLACK_STAINED_GLASS_PANE").toUpperCase());
-        } catch (IllegalArgumentException e) {
-            fillerMat = Material.BLACK_STAINED_GLASS_PANE;
-        }
-        ItemStack filler = new ItemStack(fillerMat);
+        // Fill everything with hub filler
+        ItemStack filler = new ItemStack(plugin.getConfigManager().getHubFillerMaterial());
         ItemMeta fm = filler.getItemMeta();
         fm.setDisplayName(" ");
         filler.setItemMeta(fm);
@@ -69,75 +53,76 @@ public class CategoryHubGUI {
             inv.setItem(i, filler);
         }
 
-        // Category slots: row 1, columns 1-7 (slots 10-16)
-        int[] slots = {10, 11, 12, 13, 14, 15, 16};
-
+        int[] slots = plugin.getConfigManager().getHubCategorySlots();
         PlayerData data = plugin.getRepository().getPlayerData(player.getUniqueId());
+
+        if (visible.size() > slots.length) {
+            plugin.getLog().warn("[HUB] " + visible.size() + " categories but only " + slots.length
+                    + " slots configured (gui.hub.category-slots) - " + (visible.size() - slots.length) + " hidden.");
+        }
 
         for (int i = 0; i < visible.size() && i < slots.length; i++) {
             Category cat = visible.get(i);
             List<Milestone> catMilestones = registry.getMilestonesForCategory(cat.getId());
             CategorySummary summary = CategorySummary.compute(plugin, cat.getId(), catMilestones, data, plugin.getMilestoneManager());
-            ItemStack item = createCategoryItem(cat, summary);
-            inv.setItem(slots[i], item);
+            inv.setItem(slots[i], createCategoryItem(cat, summary));
         }
 
-        // Stats item: row 3, center (slot 31)
-        inv.setItem(31, createStatsItem(player, data, registry));
+        // Stats item: row 3 center (slot 31)
+        inv.setItem(31, createStatsItem(player, data));
 
-        // Close button: row 3, right side (slot 35)
+        // Close button: row 3 right (slot 35)
         ItemStack close = new ItemStack(Material.BARRIER);
         ItemMeta cm = close.getItemMeta();
-        cm.setDisplayName(MessageUtil.color("&c&l✕ Close"));
+        cm.setDisplayName(MessageUtil.color("&c&l\u2715 Close"));
         close.setItemMeta(cm);
         inv.setItem(35, close);
 
         player.openInventory(inv);
     }
 
-    /**
-     * Handle click in hub inventory. Returns true if handled.
-     */
-    public boolean handleClick(Player player, int slot) {
-        CategoryRegistry registry = plugin.getCategoryRegistry();
-        List<Category> cats = registry.getSortedCategories();
-        boolean hideEmpty = plugin.getConfig().getBoolean("gui.hub.hide-empty", true);
-
+    /** Categories visible in the hub, respecting hide-empty. Shared by open() and handleClick(). */
+    private List<Category> visibleCategories(CategoryRegistry registry) {
+        boolean hideEmpty = plugin.getConfigManager().isHubHideEmpty();
         List<Category> visible = new ArrayList<>();
-        for (Category cat : cats) {
+        for (Category cat : registry.getSortedCategories()) {
             if (!hideEmpty || registry.hasMilestones(cat.getId())) {
                 visible.add(cat);
             }
         }
+        return visible;
+    }
 
-        int[] slots = {10, 11, 12, 13, 14, 15, 16};
+    /**
+     * Handle a click in the hub inventory. The event must already be
+     * cancelled by the listener — this only routes the action.
+     */
+    public void handleClick(Player player, int slot) {
+        CategoryRegistry registry = plugin.getCategoryRegistry();
+        List<Category> visible = visibleCategories(registry);
+        int[] slots = plugin.getConfigManager().getHubCategorySlots();
 
-        // Check if clicked slot matches a category slot
         for (int i = 0; i < visible.size() && i < slots.length; i++) {
             if (slots[i] == slot) {
-                Category cat = visible.get(i);
-                ProgressTreeGUI treeGui = new ProgressTreeGUI(plugin);
-                treeGui.open(player, cat.getId(), 1);
-                return true;
+                // Page 0 = first page of the category tree (old code used 1 — off-by-one)
+                plugin.getTreeGui().open(player, visible.get(i).getId(), 0);
+                return;
             }
         }
 
-        // Close button at slot 35
-        if (slot == 35) {
+        if (slot == 35) { // Close
             player.closeInventory();
-            return true;
+            return;
         }
 
-        // All other slots: cancel interaction (prevent taking items)
-        return false;
+        // Slot 31 (stats) and everything else: display only, no action.
     }
 
     private ItemStack createCategoryItem(Category cat, CategorySummary summary) {
         ItemStack item = new ItemStack(cat.getIcon());
         ItemMeta meta = item.getItemMeta();
 
-        String color = cat.getColor();
-        meta.setDisplayName(MessageUtil.color(color + "&l" + cat.getName()));
+        meta.setDisplayName(MessageUtil.color(cat.getColor() + "&l" + cat.getName()));
 
         // Glow if claimable
         if (summary.getClaimableCount() > 0) {
@@ -146,36 +131,32 @@ public class CategoryHubGUI {
 
         List<Component> lore = new ArrayList<>();
 
-        // Description lines
         for (String desc : cat.getDescription()) {
-            lore.add(Component.text(ChatColor.stripColor(desc)).color(NamedTextColor.GRAY));
+            lore.add(Component.text(MessageUtil.strip(desc)).color(NamedTextColor.GRAY));
         }
         if (!cat.getDescription().isEmpty()) {
             lore.add(Component.empty());
         }
 
-        // Claim summary
         lore.add(Component.text("Diklaim: ").color(NamedTextColor.GRAY)
                 .append(Component.text(summary.getClaimedCount() + " / " + summary.getTotalMilestones()).color(NamedTextColor.WHITE)));
 
-        // Next milestone progress
         if (summary.getNextMilestone() != null) {
             lore.add(Component.text("Next: ").color(NamedTextColor.GRAY)
                     .append(Component.text(summary.getNextMilestone().getId()).color(NamedTextColor.WHITE))
-                    .append(Component.text(" — ").color(NamedTextColor.GRAY))
+                    .append(Component.text(" - ").color(NamedTextColor.GRAY))
                     .append(Component.text(String.format("%.0f%%", summary.getNextProgress())).color(NamedTextColor.YELLOW)));
         }
 
         lore.add(Component.empty());
 
-        // Status badge
         if (summary.getClaimableCount() > 0) {
-            lore.add(Component.text("🟢 " + summary.getClaimableCount() + " reward siap diklaim!")
+            lore.add(Component.text("\uD83D\uDFE2 " + summary.getClaimableCount() + " reward siap diklaim!")
                     .color(NamedTextColor.GREEN).decorate(TextDecoration.BOLD));
-        } else if (summary.getClaimedCount() >= summary.getTotalMilestones() && summary.getTotalMilestones() > 0) {
-            lore.add(Component.text("✅ Semua selesai!").color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+        } else if (summary.isComplete()) {
+            lore.add(Component.text("\u2705 Semua selesai!").color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
         } else {
-            lore.add(Component.text("🟡 Sedang berjalan").color(NamedTextColor.YELLOW));
+            lore.add(Component.text("\uD83D\uDFE1 Sedang berjalan").color(NamedTextColor.YELLOW));
         }
 
         lore.add(Component.empty());
@@ -186,7 +167,7 @@ public class CategoryHubGUI {
         return item;
     }
 
-    private ItemStack createStatsItem(Player player, PlayerData data, CategoryRegistry registry) {
+    private ItemStack createStatsItem(Player player, PlayerData data) {
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(MessageUtil.color("&b&l" + player.getName()));

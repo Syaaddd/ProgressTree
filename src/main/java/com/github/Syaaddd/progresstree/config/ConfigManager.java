@@ -5,6 +5,7 @@ import com.github.Syaaddd.progresstree.milestone.Milestone;
 import com.github.Syaaddd.progresstree.milestone.MilestoneChoice;
 import com.github.Syaaddd.progresstree.milestone.MilestoneType;
 import com.github.Syaaddd.progresstree.util.MessageUtil;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -61,6 +62,13 @@ public class ConfigManager {
     private String progressEmptyChar;
     private String progressFilledColor;
     private String progressEmptyColor;
+
+    // Hub (category menu) fields
+    private String hubTitle;
+    private String hubFillerMaterial;
+    private boolean hubHideEmpty;
+    private int[] hubCategorySlots;
+    private int backButtonSlot;
 
     private Map<String, Milestone> milestones;
 
@@ -127,9 +135,20 @@ public class ConfigManager {
         branchFillerMaterial = config.getString("gui.branch-filler.material", "GRAY_STAINED_GLASS_PANE");
         branchFillerName = config.getString("gui.branch-filler.name", " ");
 
+        // Hub (category menu) settings
+        hubTitle = config.getString("gui.hub.title", "&8ProgressTree");
+        hubFillerMaterial = config.getString("gui.hub.filler", "BLACK_STAINED_GLASS_PANE");
+        hubHideEmpty = config.getBoolean("gui.hub.hide-empty", true);
+        List<Integer> hubSlotList = config.getIntegerList("gui.hub.category-slots");
+        if (hubSlotList.isEmpty()) {
+            hubSlotList = Arrays.asList(10, 11, 12, 13, 14, 15, 16);
+        }
+        hubCategorySlots = hubSlotList.stream().mapToInt(Integer::intValue).toArray();
+        backButtonSlot = config.getInt("gui.navigation.back-slot", 46);
+
         // Progress bar settings
         progressBarSegments = config.getInt("gui.progress-bar.segments", 20);
-        progressFilledChar = config.getString("gui.progress-bar.filled-char", "\u25B0");
+        progressFilledChar = config.getString("gui.progress-bar.filled-char", "▰");
         progressEmptyChar = config.getString("gui.progress-bar.empty-char", "\u25B1");
         progressFilledColor = config.getString("gui.progress-bar.filled-color", "&b");
         progressEmptyColor = config.getString("gui.progress-bar.empty-color", "&8");
@@ -265,6 +284,19 @@ public class ConfigManager {
     public int getCloseSlot() { return closeSlot; }
     public int getNextPageSlot() { return nextPageSlot; }
     public String getBranchFillerMaterial() { return branchFillerMaterial; }
+
+    // ===== Hub (category menu) getters =====
+    public String getHubTitle() { return hubTitle; }
+    public boolean isHubHideEmpty() { return hubHideEmpty; }
+    public int[] getHubCategorySlots() { return hubCategorySlots; }
+    public int getBackButtonSlot() { return backButtonSlot; }
+    public Material getHubFillerMaterial() {
+        try {
+            return Material.valueOf(hubFillerMaterial.toUpperCase());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return Material.BLACK_STAINED_GLASS_PANE;
+        }
+    }
     public String getBranchFillerName() { return branchFillerName; }
     public int getProgressBarSegments() { return progressBarSegments; }
     public String getProgressFilledChar() { return progressFilledChar; }

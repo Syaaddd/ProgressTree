@@ -59,10 +59,25 @@ gui:
   # Navigation bar (row 5, bottom of 54-slot chest)
   navigation:
     prev-page-slot: 45
+    back-slot: 46        # Back to Hub (category tree only)
     player-info-slot: 47
     page-indicator-slot: 49
     close-slot: 51
     next-page-slot: 53
+
+  # Category Hub (main menu when running /pt)
+  hub:
+    title: "&8ProgressTree"
+    filler: BLACK_STAINED_GLASS_PANE
+    hide-empty: true          # hide categories with no milestones
+    category-slots:           # one row, up to 7 categories
+      - 10
+      - 11
+      - 12
+      - 13
+      - 14
+      - 15
+      - 16
 
   # Filler items between tree nodes (glass panes as "branches")
   branch-filler:

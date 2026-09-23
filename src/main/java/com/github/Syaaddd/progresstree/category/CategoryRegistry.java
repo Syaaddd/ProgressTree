@@ -66,7 +66,7 @@ public class CategoryRegistry {
                 try {
                     types.add(MilestoneType.valueOf(t.toUpperCase()));
                 } catch (IllegalArgumentException e) {
-                    log.warn("[CATEGORY] Invalid type '" + t + "' in category '" + id + "' — skipped");
+                    log.warn("[CATEGORY] Invalid type '" + t + "' in category '" + id + "' - skipped");
                 }
             }
 
@@ -134,7 +134,7 @@ public class CategoryRegistry {
             if (categories.containsKey(explicit)) {
                 return explicit;
             }
-            plugin.getLog().warn("[CATEGORY] Milestone '" + ms.getId() + "' has category='" + explicit + "' but it's not defined in gui.categories — falling back to type-based resolution");
+            plugin.getLog().warn("[CATEGORY] Milestone '" + ms.getId() + "' has category='" + explicit + "' but it's not defined in gui.categories - falling back to type-based resolution");
         }
 
         // Type-based resolution

@@ -106,7 +106,7 @@ public class MigrationService {
                     }
                 }
             } catch (SQLException ignored) {
-                // Table may not exist in legacy — that's fine
+                // Table may not exist in legacy - that's fine
                 plugin.getLog().debug("No notified_milestones table in legacy DB (expected for pre-2.0).");
             }
 

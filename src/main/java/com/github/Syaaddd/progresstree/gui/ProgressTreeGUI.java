@@ -24,7 +24,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.*;
 
 /**
- * Category tree GUI (v2.1.0). ALWAYS scoped to a category — the legacy
+ * Category tree GUI (v2.1.0). ALWAYS scoped to a category - the legacy
  * flat "all milestones in one list" mode was REMOVED because clicking
  * Next Page on a category tree could fall back into the old GUI
  * (session maps were per-instance and state was lost).
@@ -109,7 +109,7 @@ public class ProgressTreeGUI {
         }
     }
 
-    /** Nav bar (row 5). All slots come from gui.navigation.* — single source of truth. */
+    /** Nav bar (row 5). All slots come from gui.navigation.* - single source of truth. */
     private void placeNavBar(Inventory inv, Player player, int currentPage, int totalPages,
                              ConfigManager cfg, List<Milestone> milestones, Category cat, PlayerData data) {
         // Prev page
@@ -169,11 +169,11 @@ public class ProgressTreeGUI {
 
     /**
      * Route a click inside the category tree. Navigation context comes
-     * from the live inventory holder — category and page can never be lost.
+     * from the live inventory holder - category and page can never be lost.
      */
     public void handleClick(Player player, Inventory inv, int slot) {
         if (!(inv.getHolder() instanceof GuiHolder holder) || holder.categoryId() == null) {
-            // Stale GUI or holder lost — recover by opening the hub.
+            // Stale GUI or holder lost - recover by opening the hub.
             plugin.getHubGui().open(player);
             return;
         }

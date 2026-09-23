@@ -179,14 +179,14 @@ public class ConfigManager {
         for (String key : milestonesSection.getKeys(false)) {
             ConfigurationSection ms = milestonesSection.getConfigurationSection(key);
             if (ms == null) {
-                plugin.getLog().severe("[CONFIG] Milestone \'" + key + "\' is not a valid section — skipped.");
+                plugin.getLog().severe("[CONFIG] Milestone \'" + key + "\' is not a valid section - skipped.");
                 errorCount++;
                 continue;
             }
 
             String typeStr = ms.getString("type");
             if (typeStr == null || typeStr.isEmpty()) {
-                plugin.getLog().severe("[CONFIG] Milestone \'" + key + "\' missing \'type\' field — skipped.");
+                plugin.getLog().severe("[CONFIG] Milestone \'" + key + "\' missing \'type\' field - skipped.");
                 errorCount++;
                 continue;
             }
@@ -195,14 +195,14 @@ public class ConfigManager {
             try {
                 type = MilestoneType.valueOf(typeStr.toUpperCase());
             } catch (IllegalArgumentException e) {
-                plugin.getLog().severe("[CONFIG] Milestone \'" + key + "\' has invalid type \'" + typeStr + "\' — skipped. Valid types: " + Arrays.toString(MilestoneType.values()));
+                plugin.getLog().severe("[CONFIG] Milestone \'" + key + "\' has invalid type \'" + typeStr + "\' - skipped. Valid types: " + Arrays.toString(MilestoneType.values()));
                 errorCount++;
                 continue;
             }
 
             int amount = ms.getInt("amount", -1);
             if (amount <= 0) {
-                plugin.getLog().severe("[CONFIG] Milestone \'" + key + "\' has invalid amount (" + amount + ") — skipped.");
+                plugin.getLog().severe("[CONFIG] Milestone \'" + key + "\' has invalid amount (" + amount + ") - skipped.");
                 errorCount++;
                 continue;
             }
@@ -223,7 +223,7 @@ public class ConfigManager {
                     String ccmd = choiceMap.get("command") != null ? choiceMap.get("command").toString() : null;
 
                     if (cid == null || cname == null || ccmd == null) {
-                        plugin.getLog().severe("[CONFIG] Milestone \'" + key + "\' choice #" + (i+1) + " missing required fields (id/name/command) — skipped.");
+                        plugin.getLog().severe("[CONFIG] Milestone \'" + key + "\' choice #" + (i+1) + " missing required fields (id/name/command) - skipped.");
                         errorCount++;
                         continue;
                     }
@@ -347,7 +347,7 @@ public class ConfigManager {
             }
 
             // Keep old milestone-slots as comment for reference (Bukkit YAML doesn't support comments well,
-            // so we just leave it — it won't interfere since we read layout-template first now)
+            // so we just leave it - it won't interfere since we read layout-template first now)
             plugin.getLog().info("[CONFIG] Migration complete. Old 'gui.milestone-slots' kept for reference.");
         }
 

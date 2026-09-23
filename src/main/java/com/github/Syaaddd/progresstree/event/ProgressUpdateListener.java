@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * Single listener that handles ALL progress notifications.
  * Every ProgressUpdateEvent (regardless of source: block break, mob kill, playtime tick, join)
- * goes through here — guaranteeing uniform behavior.
+ * goes through here - guaranteeing uniform behavior.
  * 
  * Fix #1: Unified trigger path (all milestone types use same completion check).
  * Fix #4: Idempotent notification via notifiedMilestones set in PlayerData.

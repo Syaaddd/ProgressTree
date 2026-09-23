@@ -10,7 +10,7 @@ public class Milestone {
     private final List<MilestoneChoice> choices;
     private final String icon;
     private final String displayColor;
-    private final String category; // nullable — explicit category override
+    private final String category; // nullable - explicit category override
 
     public Milestone(String id, MilestoneType type, int amount, List<MilestoneChoice> choices, String icon, String displayColor) {
         this(id, type, amount, choices, icon, displayColor, null);

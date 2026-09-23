@@ -95,7 +95,7 @@ public class CategoryHubGUI {
 
     /**
      * Handle a click in the hub inventory. The event must already be
-     * cancelled by the listener — this only routes the action.
+     * cancelled by the listener - this only routes the action.
      */
     public void handleClick(Player player, int slot) {
         CategoryRegistry registry = plugin.getCategoryRegistry();
@@ -104,7 +104,7 @@ public class CategoryHubGUI {
 
         for (int i = 0; i < visible.size() && i < slots.length; i++) {
             if (slots[i] == slot) {
-                // Page 0 = first page of the category tree (old code used 1 — off-by-one)
+                // Page 0 = first page of the category tree (old code used 1 - off-by-one)
                 plugin.getTreeGui().open(player, visible.get(i).getId(), 0);
                 return;
             }

@@ -34,14 +34,14 @@ public final class ProgressTree extends JavaPlugin {
     private CategoryRegistry categoryRegistry;
     private Logger logger;
 
-    // Shared GUI instances — single source of truth for routing
+    // Shared GUI instances - single source of truth for routing
     private ProgressTreeGUI treeGui;
     private CategoryHubGUI hubGui;
     private ChoiceGUI choiceGUI;
 
     @Override
     public void onEnable() {
-        // Initialize logger FIRST — ConfigManager.loadMilestones() uses it
+        // Initialize logger FIRST - ConfigManager.loadMilestones() uses it
         configManager = new ConfigManager(this);
         logger = new Logger(this, false); // temp logger with debug off; re-created after load
         configManager.load();
@@ -80,11 +80,11 @@ public final class ProgressTree extends JavaPlugin {
         getCommand("progresstree").setExecutor(new ProgressTreeCommand(this));
         getCommand("progresstree").setTabCompleter(new ProgressTreeTabCompleter(this));
 
-        // Event listeners — all triggers go through ProgressUpdateEvent (fix #1)
+        // Event listeners - all triggers go through ProgressUpdateEvent (fix #1)
         getServer().getPluginManager().registerEvents(new EventListeners(this), this);
         getServer().getPluginManager().registerEvents(new ProgressUpdateListener(this), this);
 
-        // GUI click/drag handlers — route by InventoryHolder, NEVER by title
+        // GUI click/drag handlers - route by InventoryHolder, NEVER by title
         getServer().getPluginManager().registerEvents(new GuiListener(), this);
 
         // Playtime tracker
@@ -164,6 +164,6 @@ public final class ProgressTree extends JavaPlugin {
     public ProgressTreeGUI getTreeGui() { return treeGui; }
     public CategoryHubGUI getHubGui() { return hubGui; }
     public ChoiceGUI getChoiceGUI() { return choiceGUI; }
-    /** Custom leveled logger (NOT java.util.logging — use getLog() to avoid collision with JavaPlugin.getLogger()). */
+    /** Custom leveled logger (NOT java.util.logging - use getLog() to avoid collision with JavaPlugin.getLogger()). */
     public Logger getLog() { return logger; }
 }

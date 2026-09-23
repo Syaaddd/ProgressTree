@@ -138,7 +138,7 @@ public class CategoryHubGUI {
             lore.add(Component.empty());
         }
 
-        lore.add(Component.text("Diklaim: ").color(NamedTextColor.GRAY)
+        lore.add(Component.text("Claimed: ").color(NamedTextColor.GRAY)
                 .append(Component.text(summary.getClaimedCount() + " / " + summary.getTotalMilestones()).color(NamedTextColor.WHITE)));
 
         if (summary.getNextMilestone() != null) {
@@ -151,16 +151,16 @@ public class CategoryHubGUI {
         lore.add(Component.empty());
 
         if (summary.getClaimableCount() > 0) {
-            lore.add(Component.text("\uD83D\uDFE2 " + summary.getClaimableCount() + " reward siap diklaim!")
+            lore.add(Component.text("\uD83D\uDFE2 " + summary.getClaimableCount() + " rewards ready to claim!")
                     .color(NamedTextColor.GREEN).decorate(TextDecoration.BOLD));
         } else if (summary.isComplete()) {
-            lore.add(Component.text("\u2705 Semua selesai!").color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+            lore.add(Component.text("\u2705 All done!").color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
         } else {
-            lore.add(Component.text("\uD83D\uDFE1 Sedang berjalan").color(NamedTextColor.YELLOW));
+            lore.add(Component.text("\uD83D\uDFE1 In progress").color(NamedTextColor.YELLOW));
         }
 
         lore.add(Component.empty());
-        lore.add(Component.text("Klik untuk membuka").color(NamedTextColor.DARK_GRAY));
+        lore.add(Component.text("Click to open").color(NamedTextColor.DARK_GRAY));
 
         meta.lore(lore);
         item.setItemMeta(meta);

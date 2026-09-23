@@ -123,7 +123,7 @@ public class ProgressTreeGUI {
         ItemStack back = new ItemStack(Material.OAK_DOOR);
         ItemMeta bm = back.getItemMeta();
         bm.setDisplayName(MessageUtil.color("&e&l\u00AB Back to Categories"));
-        bm.setLore(Collections.singletonList(MessageUtil.color("&7Kembali ke pilihan kategori")));
+        bm.setLore(Collections.singletonList(MessageUtil.color("&7Back to category selection")));
         back.setItemMeta(bm);
         inv.setItem(cfg.getBackButtonSlot(), back);
 
@@ -132,9 +132,9 @@ public class ProgressTreeGUI {
         ItemMeta im = info.getItemMeta();
         im.setDisplayName(MessageUtil.color("&b&l" + player.getName()));
         List<String> infoLore = new ArrayList<>();
-        infoLore.add(MessageUtil.color("&7Kategori: " + cat.getName()));
-        infoLore.add(MessageUtil.color("&7Diklaim: &f" + countClaimed(data, milestones) + " / " + milestones.size()));
-        infoLore.add(MessageUtil.color("&7Halaman: &f" + (currentPage + 1) + " / " + totalPages));
+        infoLore.add(MessageUtil.color("&7Category: " + cat.getName()));
+        infoLore.add(MessageUtil.color("&7Claimed: &f" + countClaimed(data, milestones) + " / " + milestones.size()));
+        infoLore.add(MessageUtil.color("&7Page: &f" + (currentPage + 1) + " / " + totalPages));
         infoLore.add(MessageUtil.color("&7Playtime: &f" + formatTime(data != null ? data.getPlaytimeSeconds() : 0)));
         infoLore.add(MessageUtil.color("&7Blocks Broken: &f" + (data != null ? data.getBlocksBroken() : 0)));
         infoLore.add(MessageUtil.color("&7Blocks Placed: &f" + (data != null ? data.getBlocksPlaced() : 0)));
@@ -147,8 +147,8 @@ public class ProgressTreeGUI {
         // Page indicator
         ItemStack pageItem = new ItemStack(Material.BOOK);
         ItemMeta pgm = pageItem.getItemMeta();
-        pgm.setDisplayName(MessageUtil.color("&e&lHalaman " + (currentPage + 1) + " / " + totalPages));
-        pgm.setLore(Collections.singletonList(MessageUtil.color("&7Kategori: " + cat.getName())));
+        pgm.setDisplayName(MessageUtil.color("&e&lPage " + (currentPage + 1) + " / " + totalPages));
+        pgm.setLore(Collections.singletonList(MessageUtil.color("&7Category: " + cat.getName())));
         pageItem.setItemMeta(pgm);
         inv.setItem(cfg.getPageIndicatorSlot(), pageItem);
 
@@ -260,7 +260,7 @@ public class ProgressTreeGUI {
 
         List<Component> lore = new ArrayList<>();
         lore.add(Component.text("------------------------").color(NamedTextColor.GRAY));
-        lore.add(Component.text("Kategori: ").color(NamedTextColor.GRAY)
+        lore.add(Component.text("Category: ").color(NamedTextColor.GRAY)
                 .append(Component.text(MessageUtil.strip(cat.getName())).color(NamedTextColor.WHITE)));
         lore.add(Component.text("Type: ").color(NamedTextColor.GRAY)
                 .append(Component.text(typeStr).color(NamedTextColor.WHITE)));
@@ -299,7 +299,7 @@ public class ProgressTreeGUI {
         }
 
         lore.add(Component.text("------------------------").color(NamedTextColor.GRAY));
-        lore.add(Component.text(available ? "Klik untuk klaim" : "Belum terbuka").color(NamedTextColor.DARK_GRAY));
+        lore.add(Component.text(available ? "Click to claim" : "Not yet available").color(NamedTextColor.DARK_GRAY));
 
         meta.lore(lore);
         item.setItemMeta(meta);

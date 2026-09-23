@@ -94,19 +94,19 @@ public class CategoryRegistry {
         config.set("gui.hub.category-slots", Arrays.asList(10, 11, 12, 13, 14, 15, 16));
 
         setDefaultCategory(config, "playtime", "&ePlaytime", "CLOCK", "&e", 1,
-                Arrays.asList("&7Bermain lebih lama, dapat lebih banyak."), Arrays.asList("PLAYTIME"));
+                Arrays.asList("&7Play longer, earn more."), Arrays.asList("PLAYTIME"));
         setDefaultCategory(config, "mining", "&bMining", "DIAMOND_PICKAXE", "&b", 2,
-                Arrays.asList("&7Hancurkan blok, kumpulkan hadiah."), Arrays.asList("BLOCK_BREAK"));
+                Arrays.asList("&7Break blocks, collect rewards."), Arrays.asList("BLOCK_BREAK"));
         setDefaultCategory(config, "building", "&6Building", "BRICKS", "&6", 3,
-                Arrays.asList("&7Bangun dunia, raih penghargaan."), Arrays.asList("BLOCK_PLACE"));
+                Arrays.asList("&7Build the world, earn prizes."), Arrays.asList("BLOCK_PLACE"));
         setDefaultCategory(config, "hunting", "&aHunting", "ZOMBIE_HEAD", "&a", 4,
-                Arrays.asList("&7Buru mob, kumpulkan trofi."), Arrays.asList("MOB_KILL"));
+                Arrays.asList("&7Hunt mobs, collect trophies."), Arrays.asList("MOB_KILL"));
         setDefaultCategory(config, "combat", "&cCombat", "IRON_SWORD", "&c", 5,
-                Arrays.asList("&7Kalahkan pemain lain."), Arrays.asList("PLAYER_KILL"));
+                Arrays.asList("&7Defeat other players."), Arrays.asList("PLAYER_KILL"));
         setDefaultCategory(config, "loyalty", "&dLoyalty", "CAMPFIRE", "&d", 6,
-                Arrays.asList("&7Setia bermain setiap hari."), Arrays.asList("JOIN"));
+                Arrays.asList("&7Keep a daily login streak."), Arrays.asList("JOIN"));
         setDefaultCategory(config, "community", "&5Community", "BEACON", "&5", 7,
-                Arrays.asList("&7Kontribusi untuk server."), Arrays.asList("COMMUNITY_PLAYTIME"));
+                Arrays.asList("&7Contribute to the server."), Arrays.asList("COMMUNITY_PLAYTIME"));
 
         plugin.saveConfig();
         plugin.getLog().info("[CATEGORY] Generated default categories (config v2.0.0 migration)");

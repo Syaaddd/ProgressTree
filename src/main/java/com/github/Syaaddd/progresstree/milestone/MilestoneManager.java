@@ -135,21 +135,22 @@ public class MilestoneManager {
                 .orElse(null);
 
             if (choice != null) {
-                rewardExecutor.executeReward(player, choice);
+                // executeReward sends the claim message once (with %reward% replaced);
+                // MilestoneManager must not send a second copy (was double-notifying).
                 repository.claimMilestone(uuid, milestoneId, selectedChoiceId);
-
-                String msg = plugin.getConfigManager().getMsgMilestoneClaimed()
-                    .replace("%reward%", choice.getName());
-                player.sendMessage(MessageUtil.color(plugin.getConfigManager().getPrefix() + msg));
+                rewardExecutor.executeReward(player, choice);
             } else {
+                // Invalid choice id: record the claim but never execute an unknown command.
                 repository.claimMilestone(uuid, milestoneId, selectedChoiceId);
                 player.sendMessage(MessageUtil.color(plugin.getConfigManager().getPrefix() +
-                    plugin.getConfigManager().getMsgMilestoneClaimed()));
+                    plugin.getConfigManager().getMsgMilestoneClaimedSelf()
+                        .replace("%reward%", milestoneId)));
             }
         } else {
             repository.claimMilestone(uuid, milestoneId, "");
             player.sendMessage(MessageUtil.color(plugin.getConfigManager().getPrefix() +
-                plugin.getConfigManager().getMsgMilestoneClaimed()));
+                plugin.getConfigManager().getMsgMilestoneClaimedSelf()
+                    .replace("%reward%", milestoneId)));
         }
     }
 

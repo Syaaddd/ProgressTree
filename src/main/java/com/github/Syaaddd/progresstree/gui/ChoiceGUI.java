@@ -50,7 +50,7 @@ public class ChoiceGUI {
             meta.setDisplayName(MessageUtil.color("&e" + choice.getName()));
 
             List<String> lore = new ArrayList<>();
-            lore.add(MessageUtil.color("&7Klik untuk mengambil reward ini"));
+            lore.add(MessageUtil.color("&7Click to claim this reward"));
             meta.setLore(lore);
 
             item.setItemMeta(meta);

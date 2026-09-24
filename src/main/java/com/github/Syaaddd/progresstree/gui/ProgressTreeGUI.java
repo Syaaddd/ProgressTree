@@ -256,24 +256,18 @@ public class ProgressTreeGUI {
         double progress = getProgress(data, milestone);
 
         String nameColor = claimed ? cfg.getClaimedColor() : milestone.getDisplayColor();
-        meta.setDisplayName(MessageUtil.color(nameColor + "&l" + milestone.getId()));
+        meta.setDisplayName(MessageUtil.color(nameColor + "&l" + milestone.getId().replace('_', ' ')));
 
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("------------------------").color(NamedTextColor.GRAY));
         lore.add(Component.text("Category: ").color(NamedTextColor.GRAY)
                 .append(Component.text(MessageUtil.strip(cat.getName())).color(NamedTextColor.WHITE)));
         lore.add(Component.text("Type: ").color(NamedTextColor.GRAY)
                 .append(Component.text(typeStr).color(NamedTextColor.WHITE)));
-        lore.add(Component.text("Progress: ").color(NamedTextColor.GRAY)
-                .append(Component.text(currentStr).color(NamedTextColor.WHITE))
-                .append(Component.text(" / ").color(NamedTextColor.GRAY))
-                .append(Component.text(amountStr).color(NamedTextColor.WHITE)));
-
+        lore.add(Component.empty());
         lore.add(buildProgressBarComponent(progress, cfg));
-        lore.add(Component.text(currentStr + " / " + amountStr + " - " + String.format("%.0f", progress) + "%")
+        lore.add(Component.text(currentStr + " / " + amountStr + "  (" + String.format("%.0f", progress) + "%)")
                 .color(NamedTextColor.WHITE));
-
-        lore.add(Component.text("------------------------").color(NamedTextColor.GRAY));
+        lore.add(Component.empty());
 
         if (claimed) {
             lore.add(Component.text("\u2713 CLAIMED").color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
@@ -290,16 +284,13 @@ public class ProgressTreeGUI {
                 }
             }
         } else if (available) {
-            lore.add(Component.text(MessageUtil.strip(cfg.getClaimButton())).color(NamedTextColor.GREEN));
+            lore.add(Component.text(MessageUtil.strip(cfg.getClaimButton())).color(parseColor(cfg.getClaimButton(), NamedTextColor.GREEN)));
             if (milestone.hasChoices()) {
-                lore.add(Component.text(MessageUtil.strip(cfg.getChooseButton())).color(NamedTextColor.YELLOW));
+                lore.add(Component.text(MessageUtil.strip(cfg.getChooseButton())).color(parseColor(cfg.getChooseButton(), NamedTextColor.YELLOW)));
             }
         } else {
-            lore.add(Component.text("\uD83D\uDD12 Locked").color(NamedTextColor.RED));
+            lore.add(Component.text("\uD83D\uDD12 Locked").color(parseColor(cfg.getLockedColor(), NamedTextColor.RED)));
         }
-
-        lore.add(Component.text("------------------------").color(NamedTextColor.GRAY));
-        lore.add(Component.text(available ? "Click to claim" : "Not yet available").color(NamedTextColor.DARK_GRAY));
 
         meta.lore(lore);
         item.setItemMeta(meta);
@@ -350,7 +341,7 @@ public class ProgressTreeGUI {
                 double segPct = ((double) (i + 1) / segments) * percentage;
                 bar = bar.append(Component.text(cfg.getProgressFilledChar()).color(getGradientColor(segPct)));
             } else {
-                bar = bar.append(Component.text(cfg.getProgressEmptyChar()).color(parseColor(cfg.getProgressEmptyColor())));
+                bar = bar.append(Component.text(cfg.getProgressEmptyChar()).color(parseColor(cfg.getProgressEmptyColor(), NamedTextColor.DARK_GRAY)));
             }
         }
         return bar;
@@ -369,28 +360,33 @@ public class ProgressTreeGUI {
         return TextColor.color(r, g, 0);
     }
 
-    private TextColor parseColor(String legacyColor) {
-        if (legacyColor == null || legacyColor.isEmpty()) {
-            return NamedTextColor.DARK_GRAY;
+    /** Extract the last legacy color code (&x or \u00a7x) from a string as a TextColor. */
+    private TextColor parseColor(String legacy, TextColor fallback) {
+        if (legacy == null || legacy.isEmpty()) {
+            return fallback;
         }
-        return switch (legacyColor) {
-            case "&0" -> NamedTextColor.BLACK;
-            case "&1" -> NamedTextColor.DARK_BLUE;
-            case "&2" -> NamedTextColor.DARK_GREEN;
-            case "&3" -> NamedTextColor.DARK_AQUA;
-            case "&4" -> NamedTextColor.DARK_RED;
-            case "&5" -> NamedTextColor.DARK_PURPLE;
-            case "&6" -> NamedTextColor.GOLD;
-            case "&7" -> NamedTextColor.GRAY;
-            case "&8" -> NamedTextColor.DARK_GRAY;
-            case "&9" -> NamedTextColor.BLUE;
-            case "&a" -> NamedTextColor.GREEN;
-            case "&b" -> NamedTextColor.AQUA;
-            case "&c" -> NamedTextColor.RED;
-            case "&d" -> NamedTextColor.LIGHT_PURPLE;
-            case "&e" -> NamedTextColor.YELLOW;
-            case "&f" -> NamedTextColor.WHITE;
-            default -> NamedTextColor.DARK_GRAY;
+        int i = Math.max(legacy.lastIndexOf('\u00a7'), legacy.lastIndexOf('&'));
+        if (i < 0 || i + 1 >= legacy.length()) {
+            return fallback;
+        }
+        return switch (Character.toLowerCase(legacy.charAt(i + 1))) {
+            case '0' -> NamedTextColor.BLACK;
+            case '1' -> NamedTextColor.DARK_BLUE;
+            case '2' -> NamedTextColor.DARK_GREEN;
+            case '3' -> NamedTextColor.DARK_AQUA;
+            case '4' -> NamedTextColor.DARK_RED;
+            case '5' -> NamedTextColor.DARK_PURPLE;
+            case '6' -> NamedTextColor.GOLD;
+            case '7' -> NamedTextColor.GRAY;
+            case '8' -> NamedTextColor.DARK_GRAY;
+            case '9' -> NamedTextColor.BLUE;
+            case 'a' -> NamedTextColor.GREEN;
+            case 'b' -> NamedTextColor.AQUA;
+            case 'c' -> NamedTextColor.RED;
+            case 'd' -> NamedTextColor.LIGHT_PURPLE;
+            case 'e' -> NamedTextColor.YELLOW;
+            case 'f' -> NamedTextColor.WHITE;
+            default -> fallback;
         };
     }
 
